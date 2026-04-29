@@ -1,0 +1,122 @@
+Build a real, working MVP of **TradeVision AI** — a trading signal web app for Indian markets. No placeholder text, no fake buttons, no lorem ipsum. Everything must actually work.
+
+---
+
+## STACK
+
+- React + Vite (frontend)
+- Node.js + Express (backend)
+- SQLite via better-sqlite3
+- JWT auth (jsonwebtoken + bcrypt)
+- Axios for API calls
+- Recharts for charts
+- react-router-dom for routing
+- socket.io for live price updates
+
+---
+
+## REAL DATA SOURCES (free, no API key needed)
+
+For live NSE data, fetch from these public endpoints the backend should proxy (to avoid CORS):
+
+- **NSE indices:** `https://www.nseindia.com/api/allIndices` — parse NIFTY 50, BANKNIFTY, SENSEX, MIDCAP
+- **NSE quotes:** `https://www.nseindia.com/api/quote-equity?symbol=RELIANCE` — for stock prices
+- **NSE F&O OI data:** `https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY`
+- **India VIX:** included in allIndices response
+- **FII/DII data:** `https://www.nseindia.com/api/fiidiiTradeReact` — real daily FII/DII flows
+
+Backend must set these headers when calling NSE:
+```
+'User-Agent': 'Mozilla/5.0'
+'Accept': 'application/json'
+'Referer': 'https://www.nseindia.com'
+Cookie: fetch https://www.nseindia.com first to get session cookie, store it, pass it in subsequent requests
+```
+
+Backend fetches NSE data every 30 seconds, caches it in SQLite, serves it to frontend via `/api/market/*` routes. Socket.io pushes updates to all connected clients every 30 seconds.
+
+---
+
+## BACKEND ROUTES
+
+```
+POST /api/auth/login        — validate credentials, return JWT
+GET  /api/auth/verify       — verify JWT
+GET  /api/market/indices    — NIFTY, BANKNIFTY, SENSEX, VIX live
+GET  /api/market/fii-dii    — today's FII/DII net flows
+GET  /api/market/options    — NIFTY options chain (top 5 strikes each side)
+GET  /api/market/quote/:sym — live quote for a stock symbol
+GET  /api/signals           — computed signals list (logic below)
+GET  /api/alerts            — recent market alerts
+```
+
+---
+
+## SIGNAL LOGIC (real, rule-based)
+
+Backend computes signals every 30 seconds using fetched data:
+
+- **BUY signal:** price > 20-day high AND volume spike (use last price vs open as proxy) AND FII net positive today
+- **SELL signal:** price < 20-day low OR heavy CE OI buildup at nearest strike (from options chain)
+- **F&O signal:** if PCR (total PE OI / total CE OI from options chain) > 1.2 → bullish bias; < 0.8 → bearish bias
+- **VIX posture:** VIX < 14 → "Sell Premium" recommendation; VIX > 20 → "Buy Hedges" recommendation
+- Compute signals for: RELIANCE, HDFCBANK, INFY, TCS, TATASTEEL, BAJFINANCE, WIPRO
+- Store computed signals in SQLite with timestamp
+
+---
+
+## DATABASE SCHEMA
+
+```sql
+CREATE TABLE users (id, email, password_hash, plan, created_at);
+CREATE TABLE signals (id, symbol, action, entry, target, sl, type, confidence, created_at);
+CREATE TABLE market_cache (key, value, updated_at);
+CREATE TABLE alerts (id, type, message, severity, created_at);
+```
+
+Seed one user: email `demo@tradevision.in`, password `TradeVision@2025`
+
+---
+
+## FRONTEND PAGES
+
+**`/` Landing page** — real live ticker pulling from `/api/market/indices` every 30s. Hero with animated stats. Features section. How it works. Demo credentials box. No fake data anywhere on this page — ticker must show real NIFTY/BANKNIFTY values.
+
+**`/login`** — JWT login form. Auto-fill button for demo creds. Error on wrong credentials. On success store token in localStorage, redirect to `/dashboard`.
+
+**`/dashboard`** (protected) — sidebar + main layout:
+
+- **Index cards:** Live data from `/api/market/indices` via socket.io — show price, change %, change direction arrow. Recharts sparkline using last 10 price snapshots stored in SQLite cache.
+- **Signals table:** From `/api/signals` — real computed signals, refresh every 30s. Show symbol, action (BUY/SELL/HOLD badge), type, entry, target, SL, confidence %.
+- **FII/DII panel:** From `/api/market/fii-dii` — real today's net flow numbers in ₹ Crore with buy/sell bar.
+- **F&O Snapshot:** From `/api/market/options` — real PCR, max pain (strike with max combined OI), top CE and PE strikes.
+- **Alerts panel:** Auto-generated from signal logic — "VIX at X — sell premium conditions", "FII bought ₹Xcr today", etc.
+- **AI Chat (floating button):** Calls backend `/api/chat` which uses rule-based responses using real current market data (VIX value, FII number, PCR) to give contextual answers. No LLM needed — just smart string templates using live numbers.
+
+---
+
+## MOBILE
+
+Fully responsive. Below 768px: sidebar collapses, bottom nav appears (Home, Signals, F&O, Portfolio). All cards stack full width. Touch-friendly tap targets.
+
+---
+
+## DEMO MODE BANNER
+
+Show a yellow top banner in dashboard: "Demo Mode — Real market data, read-only access. Connect your broker to trade live." No fake data anywhere — even demo uses real NSE prices.
+
+---
+
+## START COMMAND
+
+`npm run dev` starts both frontend (port 5173) and backend (port 3001) concurrently. Use the `concurrently` package. Backend must successfully fetch NSE data on startup and log confirmation.
+
+---
+
+## IMPORTANT
+
+- No mock/hardcoded prices anywhere except fallback if NSE is down (show "NSE data unavailable" gracefully)
+- Every number shown must come from a real API call
+- JWT expiry: 24 hours
+- CORS configured for localhost dev
+- All API errors handled gracefully with user-facing messages

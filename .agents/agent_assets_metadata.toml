@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "2gGRGZm4MRJSrsw1f2jaq"
+uri = "file://screenshots/homepage.jpg"
+type = "image"
+title = "TradeVision AI"

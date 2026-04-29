@@ -3,20 +3,29 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TradeVision AI API — Indian markets trading signals
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: market
+    description: Live market data (NSE)
+  - name: signals
+    description: Computed trading signals
+  - name: alerts
+    description: Market alerts
+  - name: chat
+    description: Rule-based AI chat
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +33,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/login:
+    post:
+      operationId: authLogin
+      tags: [auth]
+      summary: Login with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/verify:
+    get:
+      operationId: authVerify
+      tags: [auth]
+      summary: Verify current JWT
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyResponse"
+        "401":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /market/indices:
+    get:
+      operationId: getMarketIndices
+      tags: [market]
+      summary: Live NSE indices (NIFTY 50, BANKNIFTY, SENSEX, MIDCAP, INDIA VIX)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndicesResponse"
+  /market/fii-dii:
+    get:
+      operationId: getFiiDii
+      tags: [market]
+      summary: Today's FII/DII net flows (₹ Crore)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FiiDiiResponse"
+  /market/options:
+    get:
+      operationId: getOptionsChain
+      tags: [market]
+      summary: NIFTY options snapshot — PCR, max pain, top strikes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OptionsResponse"
+  /market/quote/{symbol}:
+    get:
+      operationId: getQuote
+      tags: [market]
+      summary: Live quote for a stock symbol
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quote"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /signals:
+    get:
+      operationId: getSignals
+      tags: [signals]
+      summary: Computed trading signals (rule-based)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalsResponse"
+  /alerts:
+    get:
+      operationId: getAlerts
+      tags: [alerts]
+      summary: Recent market alerts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertsResponse"
+  /chat:
+    post:
+      operationId: postChat
+      tags: [chat]
+      summary: Rule-based market chat using live data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
 components:
   schemas:
     HealthStatus:
@@ -31,6 +184,167 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
-
+      required: [status]
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    LoginRequest:
+      type: object
+      properties:
+        email: { type: string }
+        password: { type: string }
+      required: [email, password]
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        plan: { type: string }
+      required: [id, email, plan]
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user:  { $ref: "#/components/schemas/User" }
+      required: [token, user]
+    VerifyResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+      required: [user]
+    IndexQuote:
+      type: object
+      properties:
+        symbol:     { type: string, description: "e.g. NIFTY, BANKNIFTY, SENSEX, MIDCAP, VIX" }
+        name:       { type: string }
+        price:      { type: number }
+        change:     { type: number }
+        changePct:  { type: number }
+        history:
+          type: array
+          items: { type: number }
+          description: "Most recent price snapshots (oldest first)"
+      required: [symbol, name, price, change, changePct, history]
+    IndicesResponse:
+      type: object
+      properties:
+        indices:
+          type: array
+          items: { $ref: "#/components/schemas/IndexQuote" }
+        updatedAt: { type: string }
+        stale:     { type: boolean }
+      required: [indices, updatedAt, stale]
+    FiiDiiEntry:
+      type: object
+      properties:
+        net:  { type: number }
+        buy:  { type: number }
+        sell: { type: number }
+      required: [net, buy, sell]
+    FiiDiiResponse:
+      type: object
+      properties:
+        date:      { type: string }
+        fii:       { $ref: "#/components/schemas/FiiDiiEntry" }
+        dii:       { $ref: "#/components/schemas/FiiDiiEntry" }
+        updatedAt: { type: string }
+        stale:     { type: boolean }
+      required: [date, fii, dii, updatedAt, stale]
+    OptionStrike:
+      type: object
+      properties:
+        strike: { type: number }
+        oi:     { type: number }
+        chgOi:  { type: number }
+        ltp:    { type: number }
+      required: [strike, oi, chgOi, ltp]
+    OptionsResponse:
+      type: object
+      properties:
+        underlying:      { type: string }
+        underlyingValue: { type: number }
+        pcr:             { type: number }
+        maxPain:         { type: number }
+        bias:            { type: string, description: "bullish / bearish / neutral" }
+        topCE:
+          type: array
+          items: { $ref: "#/components/schemas/OptionStrike" }
+        topPE:
+          type: array
+          items: { $ref: "#/components/schemas/OptionStrike" }
+        updatedAt: { type: string }
+        stale:     { type: boolean }
+      required: [underlying, underlyingValue, pcr, maxPain, bias, topCE, topPE, updatedAt, stale]
+    Quote:
+      type: object
+      properties:
+        symbol:    { type: string }
+        name:      { type: string }
+        price:     { type: number }
+        change:    { type: number }
+        changePct: { type: number }
+        open:      { type: number }
+        dayHigh:   { type: number }
+        dayLow:    { type: number }
+        prevClose: { type: number }
+        volume:    { type: number }
+        updatedAt: { type: string }
+      required: [symbol, name, price, change, changePct, open, dayHigh, dayLow, prevClose, volume, updatedAt]
+    Signal:
+      type: object
+      properties:
+        id:         { type: integer }
+        symbol:     { type: string }
+        action:     { type: string, description: "BUY / SELL / HOLD" }
+        type:       { type: string, description: "EQUITY / FNO / VIX" }
+        entry:      { type: number }
+        target:     { type: number }
+        sl:         { type: number }
+        confidence: { type: integer, description: "0-100" }
+        rationale:  { type: string }
+        createdAt:  { type: string }
+      required: [id, symbol, action, type, entry, target, sl, confidence, rationale, createdAt]
+    SignalsResponse:
+      type: object
+      properties:
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/Signal" }
+        updatedAt: { type: string }
+      required: [signals, updatedAt]
+    Alert:
+      type: object
+      properties:
+        id:        { type: integer }
+        type:      { type: string }
+        message:   { type: string }
+        severity:  { type: string, description: "info / warning / critical" }
+        createdAt: { type: string }
+      required: [id, type, message, severity, createdAt]
+    AlertsResponse:
+      type: object
+      properties:
+        alerts:
+          type: array
+          items: { $ref: "#/components/schemas/Alert" }
+      required: [alerts]
+    ChatRequest:
+      type: object
+      properties:
+        message: { type: string }
+      required: [message]
+    ChatResponse:
+      type: object
+      properties:
+        reply:    { type: string }
+        context:
+          type: object
+          properties:
+            vix: { type: number }
+            pcr: { type: number }
+            fiiNet: { type: number }
+            diiNet: { type: number }
+      required: [reply]
