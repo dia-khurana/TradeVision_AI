@@ -20,11 +20,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Briefcase } from "lucide-react";
+import { Briefcase, ChevronRight } from "lucide-react";
+import { Link, useLocation } from "wouter";
 
 const SECTOR_COLORS = ["#6366F1", "#8B5CF6", "#06B6D4", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#84CC16"];
 
 export default function Portfolio() {
+  const [, setLocation] = useLocation();
   const { data, isLoading } = useGetPortfolio({
     query: { queryKey: getGetPortfolioQueryKey(), refetchInterval: 30_000 },
   });
@@ -101,8 +103,31 @@ export default function Portfolio() {
             </TableHeader>
             <TableBody>
               {data.rows.map((r) => (
-                <TableRow key={r.symbol} className="border-indigo-50 hover:bg-indigo-50/40">
-                  <TableCell className="font-extrabold">{r.symbol}</TableCell>
+                <TableRow
+                  key={r.symbol}
+                  className="border-indigo-50 hover:bg-indigo-50/40 cursor-pointer group focus:outline-none focus:bg-indigo-50/60 focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  data-testid={`holding-${r.symbol}`}
+                  tabIndex={0}
+                  role="link"
+                  aria-label={`Open ${r.symbol} stock details`}
+                  onClick={() => setLocation(`/dashboard/stock/${encodeURIComponent(r.symbol)}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setLocation(`/dashboard/stock/${encodeURIComponent(r.symbol)}`);
+                    }
+                  }}
+                >
+                  <TableCell className="font-extrabold">
+                    <Link
+                      href={`/dashboard/stock/${encodeURIComponent(r.symbol)}`}
+                      className="inline-flex items-center gap-1 hover:text-indigo-600"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {r.symbol}
+                      <ChevronRight className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-right font-mono">{r.qty}</TableCell>
                   <TableCell className="text-right font-mono">₹{r.avgPrice.toFixed(2)}</TableCell>
                   <TableCell className="text-right font-mono">₹{r.currentPrice.toFixed(2)}</TableCell>

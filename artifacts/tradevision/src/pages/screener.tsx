@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 
 const PRESETS: { value: string; label: string; params: RunScreenerParams }[] = [
@@ -27,6 +27,7 @@ const PRESETS: { value: string; label: string; params: RunScreenerParams }[] = [
 ];
 
 export default function Screener() {
+  const [, setLocation] = useLocation();
   const [preset, setPreset] = useState("all");
   const params = PRESETS.find((p) => p.value === preset)?.params ?? {};
   const { data, isLoading } = useRunScreener(params, {
@@ -77,11 +78,26 @@ export default function Screener() {
             </TableHeader>
             <TableBody>
               {sortedRows.map((r) => (
-                <TableRow key={r.symbol} className="border-indigo-50 hover:bg-indigo-50/40">
+                <TableRow
+                  key={r.symbol}
+                  data-testid={`screener-row-${r.symbol}`}
+                  className="border-indigo-50 hover:bg-indigo-50/40 cursor-pointer group focus:outline-none focus:bg-indigo-50/60 focus-visible:ring-2 focus-visible:ring-indigo-400"
+                  tabIndex={0}
+                  role="link"
+                  aria-label={`Open ${r.symbol} stock details`}
+                  onClick={() => setLocation(`/dashboard/stock/${encodeURIComponent(r.symbol)}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setLocation(`/dashboard/stock/${encodeURIComponent(r.symbol)}`);
+                    }
+                  }}
+                >
                   <TableCell className="font-extrabold">
                     <Link
                       href={`/dashboard/stock/${encodeURIComponent(r.symbol)}`}
-                      className="hover:text-indigo-600"
+                      className="hover:text-indigo-600 inline-flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       {r.symbol}
                     </Link>
