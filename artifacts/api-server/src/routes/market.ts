@@ -1,50 +1,64 @@
 import { Router, type IRouter } from "express";
 import {
-  GetMarketIndicesResponse,
-  GetFiiDiiResponse,
-  GetOptionsChainResponse,
-  GetQuoteResponse,
-} from "@workspace/api-zod";
-import {
   fetchIndices,
   fetchFiiDii,
-  fetchOptions,
+  fetchOptionsChain,
   fetchQuote,
+  fetchHistory,
+  searchSymbols,
 } from "../lib/marketService";
-import { getMem } from "../lib/cache";
+import { requireAuth } from "../lib/auth";
+import {
+  GetMarketIndicesResponse,
+  GetFiiDiiResponse,
+  GetOptionsChainForResponse,
+  GetQuoteResponse,
+  GetHistoryResponse,
+  SearchSymbolsResponse,
+} from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.get("/market/indices", async (_req, res) => {
-  const cached = getMem<unknown>("market:indices");
-  const data = cached ? (cached.value as Awaited<ReturnType<typeof fetchIndices>>) : await fetchIndices();
+  const data = await fetchIndices();
   res.json(GetMarketIndicesResponse.parse(data));
 });
 
 router.get("/market/fii-dii", async (_req, res) => {
-  const cached = getMem<unknown>("market:fii-dii");
-  const data = cached ? (cached.value as Awaited<ReturnType<typeof fetchFiiDii>>) : await fetchFiiDii();
+  const data = await fetchFiiDii();
   res.json(GetFiiDiiResponse.parse(data));
 });
 
-router.get("/market/options", async (_req, res) => {
-  const cached = getMem<unknown>("market:options");
-  const data = cached ? (cached.value as Awaited<ReturnType<typeof fetchOptions>>) : await fetchOptions();
-  res.json(GetOptionsChainResponse.parse(data));
+router.get("/market/options/:underlying", async (req, res) => {
+  const u = String(req.params["underlying"] || "NIFTY").toUpperCase();
+  const allowed: Array<"NIFTY" | "BANKNIFTY"> = ["NIFTY", "BANKNIFTY"];
+  const underlying = allowed.includes(u as "NIFTY" | "BANKNIFTY")
+    ? (u as "NIFTY" | "BANKNIFTY")
+    : "NIFTY";
+  const data = await fetchOptionsChain(underlying);
+  res.json(GetOptionsChainForResponse.parse(data));
 });
 
-router.get("/market/quote/:symbol", async (req, res) => {
-  const sym = String(req.params.symbol || "").toUpperCase();
-  if (!sym) {
-    res.status(400).json({ error: "symbol required" });
+router.get("/market/quote/:symbol", requireAuth, async (req, res) => {
+  const sym = String(req.params["symbol"] || "");
+  const q = await fetchQuote(sym);
+  if (!q) {
+    res.status(404).json({ error: "Quote not available" });
     return;
   }
-  const data = await fetchQuote(sym);
-  if (!data) {
-    res.status(404).json({ error: `Quote not available for ${sym}` });
-    return;
-  }
-  res.json(GetQuoteResponse.parse(data));
+  res.json(GetQuoteResponse.parse(q));
+});
+
+router.get("/market/history/:symbol", requireAuth, async (req, res) => {
+  const sym = String(req.params["symbol"] || "");
+  const data = await fetchHistory(sym);
+  res.json(GetHistoryResponse.parse(data));
+});
+
+router.get("/market/search", requireAuth, async (req, res) => {
+  const q = String(req.query["q"] || "");
+  const results = await searchSymbols(q);
+  res.json(SearchSymbolsResponse.parse({ results }));
 });
 
 export default router;

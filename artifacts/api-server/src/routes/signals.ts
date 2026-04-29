@@ -1,13 +1,12 @@
 import { Router, type IRouter } from "express";
 import { db, signalsTable } from "@workspace/db";
-import { desc, sql } from "drizzle-orm";
-import { GetSignalsResponse } from "@workspace/api-zod";
+import { desc, eq, sql } from "drizzle-orm";
+import { GetSignalsResponse, GetFoSignalsResponse } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/signals", requireAuth, async (_req, res) => {
-  // Return the latest signal per symbol
+async function latestSignals(typeFilter?: string[]) {
   const subquery = db
     .select({
       symbol: signalsTable.symbol,
@@ -24,11 +23,12 @@ router.get("/signals", requireAuth, async (_req, res) => {
     .orderBy(desc(signalsTable.createdAt))
     .limit(50);
 
-  const signals = rows.map((r) => ({
+  let signals = rows.map((r) => ({
     id: r.signals.id,
     symbol: r.signals.symbol,
     action: r.signals.action,
     type: r.signals.type,
+    strategy: r.signals.strategy || "",
     entry: r.signals.entry,
     target: r.signals.target,
     sl: r.signals.sl,
@@ -36,10 +36,21 @@ router.get("/signals", requireAuth, async (_req, res) => {
     rationale: r.signals.rationale,
     createdAt: r.signals.createdAt.toISOString(),
   }));
+  if (typeFilter) signals = signals.filter((s) => typeFilter.includes(s.type));
+  return signals;
+}
 
-  res.json(
-    GetSignalsResponse.parse({ signals, updatedAt: new Date().toISOString() }),
-  );
+router.get("/signals", requireAuth, async (_req, res) => {
+  const signals = await latestSignals(["EQUITY"]);
+  res.json(GetSignalsResponse.parse({ signals, updatedAt: new Date().toISOString() }));
 });
+
+router.get("/signals/fo", requireAuth, async (_req, res) => {
+  const signals = await latestSignals(["FNO", "VIX"]);
+  res.json(GetFoSignalsResponse.parse({ signals, updatedAt: new Date().toISOString() }));
+});
+
+// Helpful for non-typescript clients: keep eq import used
+void eq;
 
 export default router;

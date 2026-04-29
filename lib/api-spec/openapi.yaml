@@ -2,195 +2,465 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: TradeVision AI API — Indian markets trading signals
+  version: 0.2.0
+  description: TradeVision AI API — Indian markets trading signals platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: auth
-    description: Authentication
   - name: market
-    description: Live market data (NSE)
   - name: signals
-    description: Computed trading signals
+  - name: portfolio
+  - name: watchlist
+  - name: bots
+  - name: news
+  - name: mf
+  - name: us
+  - name: crypto
+  - name: screener
   - name: alerts
-    description: Market alerts
   - name: chat
-    description: Rule-based AI chat
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
       responses:
         "200":
           description: Healthy
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
+              schema: { $ref: "#/components/schemas/HealthStatus" }
   /auth/login:
     post:
       operationId: authLogin
       tags: [auth]
-      summary: Login with email + password
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/LoginRequest"
+            schema: { $ref: "#/components/schemas/LoginRequest" }
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/LoginResponse"
+              schema: { $ref: "#/components/schemas/LoginResponse" }
         "401":
           description: Invalid credentials
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /auth/verify:
     get:
       operationId: authVerify
       tags: [auth]
-      summary: Verify current JWT
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/VerifyResponse"
+              schema: { $ref: "#/components/schemas/VerifyResponse" }
         "401":
           description: Invalid token
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /market/indices:
     get:
       operationId: getMarketIndices
       tags: [market]
-      summary: Live NSE indices (NIFTY 50, BANKNIFTY, SENSEX, MIDCAP, INDIA VIX)
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/IndicesResponse"
+              schema: { $ref: "#/components/schemas/IndicesResponse" }
   /market/fii-dii:
     get:
       operationId: getFiiDii
       tags: [market]
-      summary: Today's FII/DII net flows (₹ Crore)
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/FiiDiiResponse"
-  /market/options:
+              schema: { $ref: "#/components/schemas/FiiDiiResponse" }
+  /market/options/{underlying}:
     get:
-      operationId: getOptionsChain
+      operationId: getOptionsChainFor
       tags: [market]
-      summary: NIFTY options snapshot — PCR, max pain, top strikes
+      parameters:
+        - in: path
+          name: underlying
+          required: true
+          schema: { type: string, description: "NIFTY or BANKNIFTY" }
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/OptionsResponse"
+              schema: { $ref: "#/components/schemas/OptionsChain" }
   /market/quote/{symbol}:
     get:
       operationId: getQuote
       tags: [market]
-      summary: Live quote for a stock symbol
       parameters:
         - in: path
           name: symbol
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Quote"
+              schema: { $ref: "#/components/schemas/Quote" }
         "404":
           description: Not found
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /market/history/{symbol}:
+    get:
+      operationId: getHistory
+      tags: [market]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OhlcResponse" }
+  /market/search:
+    get:
+      operationId: searchSymbols
+      tags: [market]
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SearchResponse" }
+  /us/{symbol}:
+    get:
+      operationId: getUsHistory
+      tags: [us]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OhlcResponse" }
+  /crypto:
+    get:
+      operationId: getCryptoPrices
+      tags: [crypto]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CryptoResponse" }
+  /crypto/{coin}/history:
+    get:
+      operationId: getCryptoHistory
+      tags: [crypto]
+      parameters:
+        - in: path
+          name: coin
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OhlcResponse" }
+  /news:
+    get:
+      operationId: getNews
+      tags: [news]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NewsResponse" }
+  /mf/search:
+    get:
+      operationId: searchMutualFunds
+      tags: [mf]
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MfSearchResponse" }
+  /mf/{code}:
+    get:
+      operationId: getMutualFund
+      tags: [mf]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MfDetailResponse" }
   /signals:
     get:
       operationId: getSignals
       tags: [signals]
-      summary: Computed trading signals (rule-based)
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/SignalsResponse"
-  /alerts:
+              schema: { $ref: "#/components/schemas/SignalsResponse" }
+  /signals/fo:
     get:
-      operationId: getAlerts
-      tags: [alerts]
-      summary: Recent market alerts
+      operationId: getFoSignals
+      tags: [signals]
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/AlertsResponse"
-  /chat:
+              schema: { $ref: "#/components/schemas/SignalsResponse" }
+  /portfolio:
+    get:
+      operationId: getPortfolio
+      tags: [portfolio]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PortfolioResponse" }
+  /watchlist:
+    get:
+      operationId: getWatchlist
+      tags: [watchlist]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WatchlistResponse" }
     post:
-      operationId: postChat
-      tags: [chat]
-      summary: Rule-based market chat using live data
+      operationId: addToWatchlist
+      tags: [watchlist]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/ChatRequest"
+            schema: { $ref: "#/components/schemas/WatchlistAddRequest" }
       responses:
         "200":
           description: OK
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ChatResponse"
+              schema: { $ref: "#/components/schemas/OkResponse" }
+  /watchlist/{symbol}:
+    delete:
+      operationId: removeFromWatchlist
+      tags: [watchlist]
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+  /bots:
+    get:
+      operationId: getBots
+      tags: [bots]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BotsResponse" }
+    post:
+      operationId: createBot
+      tags: [bots]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateBotRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bot" }
+  /bots/{id}/toggle:
+    put:
+      operationId: toggleBot
+      tags: [bots]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Bot" }
+  /bots/{id}/trades:
+    get:
+      operationId: getBotTrades
+      tags: [bots]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BotTradesResponse" }
+  /bots/{id}/performance:
+    get:
+      operationId: getBotPerformance
+      tags: [bots]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/BotPerformanceResponse" }
+  /screener:
+    get:
+      operationId: runScreener
+      tags: [screener]
+      parameters:
+        - in: query
+          name: sector
+          schema: { type: string }
+        - in: query
+          name: minPrice
+          schema: { type: number }
+        - in: query
+          name: maxPrice
+          schema: { type: number }
+        - in: query
+          name: minRsi
+          schema: { type: number }
+        - in: query
+          name: maxRsi
+          schema: { type: number }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScreenerResponse" }
+  /alerts:
+    get:
+      operationId: getAlerts
+      tags: [alerts]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AlertsResponse" }
+  /alerts/read/{id}:
+    post:
+      operationId: markAlertRead
+      tags: [alerts]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OkResponse" }
+  /chat:
+    post:
+      operationId: postChat
+      tags: [chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatResponse" }
+  /chat/history:
+    get:
+      operationId: getChatHistory
+      tags: [chat]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatHistoryResponse" }
 components:
   schemas:
     HealthStatus:
       type: object
-      properties:
-        status:
-          type: string
+      properties: { status: { type: string } }
       required: [status]
     ErrorResponse:
       type: object
-      properties:
-        error:
-          type: string
+      properties: { error: { type: string } }
       required: [error]
+    OkResponse:
+      type: object
+      properties: { ok: { type: boolean } }
+      required: [ok]
     LoginRequest:
       type: object
       properties:
@@ -202,13 +472,15 @@ components:
       properties:
         id: { type: integer }
         email: { type: string }
+        name: { type: string }
         plan: { type: string }
-      required: [id, email, plan]
+        avatarInitials: { type: string }
+      required: [id, email, name, plan, avatarInitials]
     LoginResponse:
       type: object
       properties:
         token: { type: string }
-        user:  { $ref: "#/components/schemas/User" }
+        user: { $ref: "#/components/schemas/User" }
       required: [token, user]
     VerifyResponse:
       type: object
@@ -218,15 +490,14 @@ components:
     IndexQuote:
       type: object
       properties:
-        symbol:     { type: string, description: "e.g. NIFTY, BANKNIFTY, SENSEX, MIDCAP, VIX" }
-        name:       { type: string }
-        price:      { type: number }
-        change:     { type: number }
-        changePct:  { type: number }
+        symbol: { type: string }
+        name: { type: string }
+        price: { type: number }
+        change: { type: number }
+        changePct: { type: number }
         history:
           type: array
           items: { type: number }
-          description: "Most recent price snapshots (oldest first)"
       required: [symbol, name, price, change, changePct, history]
     IndicesResponse:
       type: object
@@ -235,78 +506,191 @@ components:
           type: array
           items: { $ref: "#/components/schemas/IndexQuote" }
         updatedAt: { type: string }
-        stale:     { type: boolean }
+        stale: { type: boolean }
       required: [indices, updatedAt, stale]
     FiiDiiEntry:
       type: object
       properties:
-        net:  { type: number }
-        buy:  { type: number }
+        net: { type: number }
+        buy: { type: number }
         sell: { type: number }
       required: [net, buy, sell]
     FiiDiiResponse:
       type: object
       properties:
-        date:      { type: string }
-        fii:       { $ref: "#/components/schemas/FiiDiiEntry" }
-        dii:       { $ref: "#/components/schemas/FiiDiiEntry" }
+        date: { type: string }
+        fii: { $ref: "#/components/schemas/FiiDiiEntry" }
+        dii: { $ref: "#/components/schemas/FiiDiiEntry" }
         updatedAt: { type: string }
-        stale:     { type: boolean }
+        stale: { type: boolean }
       required: [date, fii, dii, updatedAt, stale]
-    OptionStrike:
+    OptionRow:
       type: object
       properties:
         strike: { type: number }
-        oi:     { type: number }
-        chgOi:  { type: number }
-        ltp:    { type: number }
-      required: [strike, oi, chgOi, ltp]
-    OptionsResponse:
+        ceOi: { type: number }
+        ceChgOi: { type: number }
+        ceLtp: { type: number }
+        ceIv: { type: number }
+        peOi: { type: number }
+        peChgOi: { type: number }
+        peLtp: { type: number }
+        peIv: { type: number }
+      required: [strike, ceOi, ceChgOi, ceLtp, ceIv, peOi, peChgOi, peLtp, peIv]
+    OptionsChain:
       type: object
       properties:
-        underlying:      { type: string }
+        underlying: { type: string }
         underlyingValue: { type: number }
-        pcr:             { type: number }
-        maxPain:         { type: number }
-        bias:            { type: string, description: "bullish / bearish / neutral" }
-        topCE:
+        atm: { type: number }
+        pcr: { type: number }
+        maxPain: { type: number }
+        bias: { type: string }
+        rows:
           type: array
-          items: { $ref: "#/components/schemas/OptionStrike" }
-        topPE:
-          type: array
-          items: { $ref: "#/components/schemas/OptionStrike" }
+          items: { $ref: "#/components/schemas/OptionRow" }
+        expiry: { type: string }
         updatedAt: { type: string }
-        stale:     { type: boolean }
-      required: [underlying, underlyingValue, pcr, maxPain, bias, topCE, topPE, updatedAt, stale]
+        stale: { type: boolean }
+      required: [underlying, underlyingValue, atm, pcr, maxPain, bias, rows, expiry, updatedAt, stale]
     Quote:
       type: object
       properties:
-        symbol:    { type: string }
-        name:      { type: string }
-        price:     { type: number }
-        change:    { type: number }
+        symbol: { type: string }
+        name: { type: string }
+        price: { type: number }
+        change: { type: number }
         changePct: { type: number }
-        open:      { type: number }
-        dayHigh:   { type: number }
-        dayLow:    { type: number }
+        open: { type: number }
+        dayHigh: { type: number }
+        dayLow: { type: number }
         prevClose: { type: number }
-        volume:    { type: number }
+        volume: { type: number }
+        sector: { type: string }
+        marketCap: { type: number }
+        pe: { type: number }
+        weekHigh52: { type: number }
+        weekLow52: { type: number }
         updatedAt: { type: string }
-      required: [symbol, name, price, change, changePct, open, dayHigh, dayLow, prevClose, volume, updatedAt]
+      required: [symbol, name, price, change, changePct, open, dayHigh, dayLow, prevClose, volume, sector, marketCap, pe, weekHigh52, weekLow52, updatedAt]
+    Candle:
+      type: object
+      properties:
+        time: { type: string }
+        open: { type: number }
+        high: { type: number }
+        low: { type: number }
+        close: { type: number }
+        volume: { type: number }
+      required: [time, open, high, low, close, volume]
+    OhlcResponse:
+      type: object
+      properties:
+        symbol: { type: string }
+        candles:
+          type: array
+          items: { $ref: "#/components/schemas/Candle" }
+        updatedAt: { type: string }
+      required: [symbol, candles, updatedAt]
+    SearchResult:
+      type: object
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        type: { type: string }
+      required: [symbol, name, type]
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/SearchResult" }
+      required: [results]
+    CryptoCoin:
+      type: object
+      properties:
+        id: { type: string }
+        symbol: { type: string }
+        name: { type: string }
+        priceUsd: { type: number }
+        change24h: { type: number }
+      required: [id, symbol, name, priceUsd, change24h]
+    CryptoResponse:
+      type: object
+      properties:
+        coins:
+          type: array
+          items: { $ref: "#/components/schemas/CryptoCoin" }
+        updatedAt: { type: string }
+      required: [coins, updatedAt]
+    NewsArticle:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        source: { type: string }
+        url: { type: string }
+        category: { type: string }
+        publishedAt: { type: string }
+      required: [id, title, summary, source, url, category, publishedAt]
+    NewsResponse:
+      type: object
+      properties:
+        articles:
+          type: array
+          items: { $ref: "#/components/schemas/NewsArticle" }
+      required: [articles]
+    MfHit:
+      type: object
+      properties:
+        schemeCode: { type: string }
+        schemeName: { type: string }
+      required: [schemeCode, schemeName]
+    MfSearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/MfHit" }
+      required: [results]
+    MfNavPoint:
+      type: object
+      properties:
+        date: { type: string }
+        nav: { type: number }
+      required: [date, nav]
+    MfDetailResponse:
+      type: object
+      properties:
+        schemeCode: { type: string }
+        schemeName: { type: string }
+        fundHouse: { type: string }
+        category: { type: string }
+        currentNav: { type: number }
+        change1d: { type: number }
+        change1w: { type: number }
+        change1m: { type: number }
+        change1y: { type: number }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/MfNavPoint" }
+      required: [schemeCode, schemeName, fundHouse, category, currentNav, change1d, change1w, change1m, change1y, history]
     Signal:
       type: object
       properties:
-        id:         { type: integer }
-        symbol:     { type: string }
-        action:     { type: string, description: "BUY / SELL / HOLD" }
-        type:       { type: string, description: "EQUITY / FNO / VIX" }
-        entry:      { type: number }
-        target:     { type: number }
-        sl:         { type: number }
-        confidence: { type: integer, description: "0-100" }
-        rationale:  { type: string }
-        createdAt:  { type: string }
-      required: [id, symbol, action, type, entry, target, sl, confidence, rationale, createdAt]
+        id: { type: integer }
+        symbol: { type: string }
+        action: { type: string }
+        type: { type: string }
+        strategy: { type: string }
+        entry: { type: number }
+        target: { type: number }
+        sl: { type: number }
+        confidence: { type: integer }
+        rationale: { type: string }
+        createdAt: { type: string }
+      required: [id, symbol, action, type, strategy, entry, target, sl, confidence, rationale, createdAt]
     SignalsResponse:
       type: object
       properties:
@@ -315,15 +699,155 @@ components:
           items: { $ref: "#/components/schemas/Signal" }
         updatedAt: { type: string }
       required: [signals, updatedAt]
+    PortfolioRowItem:
+      type: object
+      properties:
+        id: { type: integer }
+        symbol: { type: string }
+        assetType: { type: string }
+        qty: { type: number }
+        avgPrice: { type: number }
+        currentPrice: { type: number }
+        invested: { type: number }
+        currentValue: { type: number }
+        pnl: { type: number }
+        pnlPct: { type: number }
+        dayPnl: { type: number }
+        sector: { type: string }
+      required: [id, symbol, assetType, qty, avgPrice, currentPrice, invested, currentValue, pnl, pnlPct, dayPnl, sector]
+    PortfolioResponse:
+      type: object
+      properties:
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/PortfolioRowItem" }
+        invested: { type: number }
+        currentValue: { type: number }
+        totalPnl: { type: number }
+        totalPnlPct: { type: number }
+        dayPnl: { type: number }
+        sectorAllocation:
+          type: array
+          items:
+            type: object
+            properties:
+              sector: { type: string }
+              value: { type: number }
+            required: [sector, value]
+        updatedAt: { type: string }
+      required: [rows, invested, currentValue, totalPnl, totalPnlPct, dayPnl, sectorAllocation, updatedAt]
+    WatchlistItem:
+      type: object
+      properties:
+        id: { type: integer }
+        symbol: { type: string }
+        assetType: { type: string }
+        price: { type: number }
+        change: { type: number }
+        changePct: { type: number }
+      required: [id, symbol, assetType, price, change, changePct]
+    WatchlistResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WatchlistItem" }
+        updatedAt: { type: string }
+      required: [items, updatedAt]
+    WatchlistAddRequest:
+      type: object
+      properties:
+        symbol: { type: string }
+        assetType: { type: string }
+      required: [symbol, assetType]
+    Bot:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        capital: { type: number }
+        pnl: { type: number }
+        tradesCount: { type: integer }
+        winRate: { type: number }
+        config: { type: string }
+        createdAt: { type: string }
+      required: [id, name, type, status, capital, pnl, tradesCount, winRate, config, createdAt]
+    BotsResponse:
+      type: object
+      properties:
+        bots:
+          type: array
+          items: { $ref: "#/components/schemas/Bot" }
+      required: [bots]
+    CreateBotRequest:
+      type: object
+      properties:
+        name: { type: string }
+        type: { type: string }
+        capital: { type: number }
+        config: { type: string }
+      required: [name, type, capital, config]
+    BotTrade:
+      type: object
+      properties:
+        id: { type: integer }
+        symbol: { type: string }
+        action: { type: string }
+        price: { type: number }
+        qty: { type: number }
+        pnl: { type: number }
+        executedAt: { type: string }
+      required: [id, symbol, action, price, qty, pnl, executedAt]
+    BotTradesResponse:
+      type: object
+      properties:
+        trades:
+          type: array
+          items: { $ref: "#/components/schemas/BotTrade" }
+      required: [trades]
+    BotPerfPoint:
+      type: object
+      properties:
+        date: { type: string }
+        pnl: { type: number }
+      required: [date, pnl]
+    BotPerformanceResponse:
+      type: object
+      properties:
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/BotPerfPoint" }
+      required: [points]
+    ScreenerRow:
+      type: object
+      properties:
+        symbol: { type: string }
+        name: { type: string }
+        price: { type: number }
+        changePct: { type: number }
+        rsi: { type: number }
+        sector: { type: string }
+        signal: { type: string }
+      required: [symbol, name, price, changePct, rsi, sector, signal]
+    ScreenerResponse:
+      type: object
+      properties:
+        rows:
+          type: array
+          items: { $ref: "#/components/schemas/ScreenerRow" }
+      required: [rows]
     Alert:
       type: object
       properties:
-        id:        { type: integer }
-        type:      { type: string }
-        message:   { type: string }
-        severity:  { type: string, description: "info / warning / critical" }
+        id: { type: integer }
+        type: { type: string }
+        message: { type: string }
+        severity: { type: string }
+        isRead: { type: boolean }
         createdAt: { type: string }
-      required: [id, type, message, severity, createdAt]
+      required: [id, type, message, severity, isRead, createdAt]
     AlertsResponse:
       type: object
       properties:
@@ -335,16 +859,27 @@ components:
       type: object
       properties:
         message: { type: string }
+        imageBase64: { type: string }
+        imageMimeType: { type: string }
       required: [message]
     ChatResponse:
       type: object
       properties:
-        reply:    { type: string }
-        context:
-          type: object
-          properties:
-            vix: { type: number }
-            pcr: { type: number }
-            fiiNet: { type: number }
-            diiNet: { type: number }
+        reply: { type: string }
       required: [reply]
+    ChatMessage:
+      type: object
+      properties:
+        id: { type: integer }
+        role: { type: string }
+        content: { type: string }
+        hasImage: { type: boolean }
+        createdAt: { type: string }
+      required: [id, role, content, hasImage, createdAt]
+    ChatHistoryResponse:
+      type: object
+      properties:
+        messages:
+          type: array
+          items: { $ref: "#/components/schemas/ChatMessage" }
+      required: [messages]

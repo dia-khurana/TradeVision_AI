@@ -10,36 +10,56 @@ import Dashboard from "@/pages/dashboard";
 import Signals from "@/pages/signals";
 import Fno from "@/pages/fno";
 import Portfolio from "@/pages/portfolio";
+import Watchlist from "@/pages/watchlist";
+import Bots from "@/pages/bots";
+import BotDetail from "@/pages/bot-detail";
+import News from "@/pages/news";
+import Screener from "@/pages/screener";
+import Crypto from "@/pages/crypto";
+import UsStocks from "@/pages/us-stocks";
+import MutualFunds from "@/pages/mutual-funds";
+import Alerts from "@/pages/alerts";
+import Chat from "@/pages/chat";
+import Settings from "@/pages/settings";
+import StockDetail from "@/pages/stock-detail";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppShell } from "@/components/AppShell";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 15_000, refetchOnWindowFocus: false } },
+});
+
+function inShell(C: React.ComponentType) {
+  return (
+    <ProtectedRoute>
+      <AppShell>
+        <C />
+      </AppShell>
+    </ProtectedRoute>
+  );
+}
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/login" component={Login} />
-      <Route path="/dashboard">
-        <ProtectedRoute>
-          <AppShell><Dashboard /></AppShell>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/signals">
-        <ProtectedRoute>
-          <AppShell><Signals /></AppShell>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/fno">
-        <ProtectedRoute>
-          <AppShell><Fno /></AppShell>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/dashboard/portfolio">
-        <ProtectedRoute>
-          <AppShell><Portfolio /></AppShell>
-        </ProtectedRoute>
-      </Route>
+      <Route path="/dashboard">{inShell(Dashboard)}</Route>
+      <Route path="/dashboard/signals">{inShell(Signals)}</Route>
+      <Route path="/dashboard/fno">{inShell(Fno)}</Route>
+      <Route path="/dashboard/portfolio">{inShell(Portfolio)}</Route>
+      <Route path="/dashboard/watchlist">{inShell(Watchlist)}</Route>
+      <Route path="/dashboard/bots">{inShell(Bots)}</Route>
+      <Route path="/dashboard/bots/:id">{inShell(BotDetail)}</Route>
+      <Route path="/dashboard/news">{inShell(News)}</Route>
+      <Route path="/dashboard/screener">{inShell(Screener)}</Route>
+      <Route path="/dashboard/crypto">{inShell(Crypto)}</Route>
+      <Route path="/dashboard/us">{inShell(UsStocks)}</Route>
+      <Route path="/dashboard/mf">{inShell(MutualFunds)}</Route>
+      <Route path="/dashboard/alerts">{inShell(Alerts)}</Route>
+      <Route path="/dashboard/chat">{inShell(Chat)}</Route>
+      <Route path="/dashboard/settings">{inShell(Settings)}</Route>
+      <Route path="/dashboard/stock/:symbol">{inShell(StockDetail)}</Route>
       <Route component={NotFound} />
     </Switch>
   );

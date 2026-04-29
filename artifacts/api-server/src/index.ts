@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { Server as IoServer } from "socket.io";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { seedDemoUser } from "./lib/seed";
+import { seedAll } from "./lib/seed";
 import { startScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
@@ -38,7 +38,7 @@ httpServer.listen(port, () => {
   // Seed and start scheduler — non-blocking
   void (async () => {
     try {
-      await seedDemoUser();
+      await seedAll();
     } catch (err) {
       logger.error({ err }, "seed failed");
     }

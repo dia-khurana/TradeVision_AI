@@ -1,6 +1,4 @@
-import { FiiDiiResponse } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import type { FiiDiiResponse } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 
 interface FiiDiiPanelProps {
@@ -10,64 +8,38 @@ interface FiiDiiPanelProps {
 export function FiiDiiPanel({ data }: FiiDiiPanelProps) {
   const { fii, dii } = data;
 
-  const maxVal = Math.max(
-    Math.abs(fii.buy), Math.abs(fii.sell),
-    Math.abs(dii.buy), Math.abs(dii.sell)
-  );
-
-  const calculatePct = (val: number) => {
-    if (maxVal === 0) return 0;
-    return (val / maxVal) * 100;
-  };
-
-  const renderBar = (buy: number, sell: number, net: number) => {
-    const buyPct = calculatePct(buy);
-    const sellPct = calculatePct(sell);
-    
+  const renderRow = (label: string, buy: number, sell: number, net: number) => {
+    const total = Math.max(buy + sell, 1);
     return (
-      <div className="space-y-3 mt-4">
+      <div className="space-y-2">
         <div className="flex justify-between items-baseline">
-          <span className="text-sm text-muted-foreground">Net Flow</span>
-          <span className={cn(
-            "font-bold font-mono",
-            net >= 0 ? "text-success" : "text-destructive"
-          )}>
+          <h4 className="font-extrabold tracking-tight text-indigo-700">{label}</h4>
+          <span className={cn("font-bold font-mono text-sm", net >= 0 ? "text-emerald-600" : "text-rose-600")}>
             {net >= 0 ? "+" : ""}₹{net.toLocaleString("en-IN")} Cr
           </span>
         </div>
-        
-        <div className="space-y-1">
-          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span>Buy (₹{buy.toLocaleString("en-IN")})</span>
-            <span>Sell (₹{sell.toLocaleString("en-IN")})</span>
-          </div>
-          <div className="flex h-2 w-full rounded-full overflow-hidden bg-muted">
-            <div className="bg-success h-full" style={{ width: `${(buy / (buy + sell || 1)) * 100}%` }} />
-            <div className="bg-destructive h-full" style={{ width: `${(sell / (buy + sell || 1)) * 100}%` }} />
-          </div>
+        <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <span>Buy ₹{buy.toLocaleString("en-IN")}</span>
+          <span>Sell ₹{sell.toLocaleString("en-IN")}</span>
+        </div>
+        <div className="flex h-2 w-full rounded-full overflow-hidden bg-indigo-100">
+          <div className="bg-emerald-500" style={{ width: `${(buy / total) * 100}%` }} />
+          <div className="bg-rose-500" style={{ width: `${(sell / total) * 100}%` }} />
         </div>
       </div>
     );
   };
 
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border-border/50 h-full flex flex-col">
-      <CardHeader className="pb-2 border-b border-border/50">
-        <CardTitle className="text-sm font-semibold flex items-center justify-between">
-          FII / DII Activity
-          <span className="text-xs font-normal text-muted-foreground">Today</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0 flex-1 grid grid-cols-2 divide-x divide-border/50">
-        <div className="p-4">
-          <h4 className="font-bold text-primary tracking-tight">FII</h4>
-          {renderBar(fii.buy, fii.sell, fii.net)}
-        </div>
-        <div className="p-4">
-          <h4 className="font-bold text-primary tracking-tight">DII</h4>
-          {renderBar(dii.buy, dii.sell, dii.net)}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="premium-card h-full flex flex-col">
+      <div className="px-4 py-3 border-b border-indigo-100 flex items-center justify-between">
+        <div className="text-sm font-bold tracking-tight">FII / DII Activity</div>
+        <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Today</span>
+      </div>
+      <div className="p-4 flex-1 grid grid-cols-1 gap-5 content-start">
+        {renderRow("FII", fii.buy, fii.sell, fii.net)}
+        {renderRow("DII", dii.buy, dii.sell, dii.net)}
+      </div>
+    </div>
   );
 }

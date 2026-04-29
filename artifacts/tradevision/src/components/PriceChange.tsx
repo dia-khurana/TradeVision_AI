@@ -8,26 +8,24 @@ interface PriceChangeProps {
   iconSize?: number;
 }
 
-export function PriceChange({ change, changePct, className, iconSize = 16 }: PriceChangeProps) {
-  const isPositive = change >= 0;
-  const isNegative = change < 0;
-
+export function PriceChange({ change, changePct, className, iconSize = 14 }: PriceChangeProps) {
+  const up = change >= 0;
   return (
     <div
       className={cn(
-        "flex items-center gap-1 font-medium",
-        isPositive ? "text-success" : "text-destructive",
-        className
+        "inline-flex items-center gap-1 font-bold tabular-nums",
+        up ? "text-emerald-600" : "text-rose-600",
+        className,
       )}
     >
-      {isPositive ? (
+      {up ? (
         <ArrowUpRight style={{ width: iconSize, height: iconSize }} />
       ) : (
         <ArrowDownRight style={{ width: iconSize, height: iconSize }} />
       )}
       <span>
-        {isPositive ? "+" : ""}
-        {change.toFixed(2)} ({isPositive ? "+" : ""}
+        {up ? "+" : ""}
+        {change.toFixed(2)} ({up ? "+" : ""}
         {changePct.toFixed(2)}%)
       </span>
     </div>
