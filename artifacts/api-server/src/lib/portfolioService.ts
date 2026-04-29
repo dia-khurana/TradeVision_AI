@@ -1,6 +1,6 @@
 import { db, portfolioTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { fetchQuote } from "./marketService";
+import { fetchQuotesBatch } from "./marketService";
 import { symbolMeta } from "./symbols";
 
 export interface PortfolioRowItem {
@@ -35,13 +35,16 @@ export async function getPortfolioForUser(userId: number): Promise<PortfolioPayl
     .from(portfolioTable)
     .where(eq(portfolioTable.userId, userId));
 
+  // Single batched quote round-trip (cache-aware) instead of N sequential NSE/Yahoo calls.
+  const quotes = await fetchQuotesBatch(positions.map((p) => p.symbol));
+
   const rows: PortfolioRowItem[] = [];
   let invested = 0;
   let currentValue = 0;
   let dayPnl = 0;
 
   for (const p of positions) {
-    const q = await fetchQuote(p.symbol);
+    const q = quotes.get(p.symbol.toUpperCase());
     const currentPrice = q?.price ?? p.avgPrice;
     const sector = p.sector || symbolMeta(p.symbol).sector;
     const inv = p.qty * p.avgPrice;

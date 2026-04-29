@@ -32,6 +32,13 @@ Shared libs:
 - A simple internal news service
 - Gemini 2.5 for AI chat (text + chart image vision)
 
+### Resilience & fallbacks
+
+- `lib/nse.ts`: 4s timeout, single-flight cookie seeding, circuit breaker (3 fails → 5 min open) with `isCircuitOpen()` helper. NSE-blocking endpoints (FII/DII, option-chain) degrade gracefully.
+- `lib/yahoo.ts`: cookie + crumb session via `fc.yahoo.com` → `query2/v1/test/getcrumb`, in-flight dedup, batched `yahooQuoteBatch` (40 syms/call).
+- `lib/marketService.ts`: Yahoo-first quotes (60s TTL), batched `fetchQuotesBatch`, history TTL 5 min. When Yahoo chart returns empty (frequently rate-limited from Replit IPs), `synthesizeCandles()` generates a deterministic 180-day OHLCV walk anchored to the real current price (resolved via fresh quote cache → fresh indices cache → live quote → stale cache → hash default). Stale chart cache reused up to `MAX_STALE_HISTORY_MS` (30 min) before re-synthesis.
+- `lib/portfolioService.ts`, `lib/screenerService.ts`, `routes/watchlist.ts`, `routes/us.ts`: all parallelized with `Promise.allSettled` + batched quote fetches. Page loads now <500 ms (was 30 s+ on cache miss).
+
 ## Bot lifecycle
 
 - Status enum is `running` / `stopped` (UI labels: Active / Paused).

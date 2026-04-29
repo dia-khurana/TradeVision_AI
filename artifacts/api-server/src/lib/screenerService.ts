@@ -1,4 +1,4 @@
-import { fetchQuote, fetchHistory } from "./marketService";
+import { fetchQuotesBatch, fetchHistory } from "./marketService";
 import { TRACKED_SYMBOLS, symbolMeta } from "./symbols";
 
 export interface ScreenerRow {
@@ -35,16 +35,30 @@ export async function runScreener(filters: {
   minRsi?: number;
   maxRsi?: number;
 }): Promise<ScreenerRow[]> {
+  const candidates = filters.sector
+    ? TRACKED_SYMBOLS.filter((m) => m.sector === filters.sector)
+    : TRACKED_SYMBOLS;
+
+  // Batched quote fetch: single Yahoo round-trip for all candidates.
+  const quotes = await fetchQuotesBatch(candidates.map((m) => m.symbol));
+
+  // History calls are cached for 5 min; first fill is parallel with allSettled so a single
+  // failure doesn't break the whole grid.
+  const histResults = await Promise.allSettled(
+    candidates.map((m) => fetchHistory(m.symbol)),
+  );
+
   const out: ScreenerRow[] = [];
-  for (const meta of TRACKED_SYMBOLS) {
-    if (filters.sector && filters.sector !== meta.sector) continue;
-    const q = await fetchQuote(meta.symbol);
+  for (let i = 0; i < candidates.length; i++) {
+    const meta = candidates[i];
+    const q = quotes.get(meta.symbol);
     if (!q) continue;
     if (filters.minPrice !== undefined && q.price < filters.minPrice) continue;
     if (filters.maxPrice !== undefined && q.price > filters.maxPrice) continue;
 
-    const hist = await fetchHistory(meta.symbol);
-    const closes = hist.candles.map((c) => c.close);
+    const histRes = histResults[i];
+    const closes =
+      histRes.status === "fulfilled" ? histRes.value.candles.map((c) => c.close) : [];
     const r = rsi14(closes);
     if (filters.minRsi !== undefined && r < filters.minRsi) continue;
     if (filters.maxRsi !== undefined && r > filters.maxRsi) continue;

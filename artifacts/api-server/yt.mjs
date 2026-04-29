@@ -1,0 +1,14 @@
+import axios from "axios";
+const HEADERS = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36", Accept: "*/*" };
+const c = axios.create({ timeout: 8000, headers: HEADERS, validateStatus: () => true });
+const seed = await c.get("https://fc.yahoo.com/");
+console.log("seed status:", seed.status, "set-cookie present:", !!seed.headers["set-cookie"]);
+let cookies = "";
+if (seed.headers["set-cookie"]) cookies = seed.headers["set-cookie"].map(s => s.split(";")[0]).join("; ");
+console.log("cookies:", cookies.slice(0, 80));
+const crumb = await c.get("https://query2.finance.yahoo.com/v1/test/getcrumb", { headers: { ...HEADERS, Cookie: cookies }, transformResponse: d=>d });
+console.log("crumb status:", crumb.status, "body:", JSON.stringify(crumb.data).slice(0, 100));
+const chart = await c.get("https://query2.finance.yahoo.com/v8/finance/chart/AAPL", { params: { range: "6mo", interval: "1d", crumb: typeof crumb.data === "string" ? crumb.data.trim() : "" }, headers: { ...HEADERS, Cookie: cookies } });
+console.log("chart status:", chart.status, "result?", !!chart.data?.chart?.result?.[0], "err:", chart.data?.chart?.error?.description);
+const r = chart.data?.chart?.result?.[0];
+if (r) console.log("ts len:", r.timestamp?.length, "first close:", r.indicators?.quote?.[0]?.close?.[0]);

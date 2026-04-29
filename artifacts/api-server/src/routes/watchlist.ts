@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, watchlistTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
 import { type AuthedRequest, requireAuth } from "../lib/auth";
-import { fetchQuote, fetchIndices } from "../lib/marketService";
+import { fetchQuotesBatch, fetchIndices } from "../lib/marketService";
 import {
   GetWatchlistResponse,
   AddToWatchlistBody,
@@ -19,37 +19,41 @@ router.get("/watchlist", requireAuth, async (req: AuthedRequest, res) => {
     .from(watchlistTable)
     .where(eq(watchlistTable.userId, userId));
 
-  const indices = await fetchIndices();
-  const items = await Promise.all(
-    rows.map(async (r) => {
-      let price = 0;
-      let change = 0;
-      let changePct = 0;
-      if (r.assetType === "index") {
-        const idx = indices.indices.find((i) => i.symbol === r.symbol);
-        if (idx) {
-          price = idx.price;
-          change = idx.change;
-          changePct = idx.changePct;
-        }
-      } else {
-        const q = await fetchQuote(r.symbol);
-        if (q) {
-          price = q.price;
-          change = q.change;
-          changePct = q.changePct;
-        }
+  // Run indices + batched equity quotes in parallel.
+  const equitySymbols = rows.filter((r) => r.assetType !== "index").map((r) => r.symbol);
+  const [indices, quotes] = await Promise.all([
+    fetchIndices(),
+    fetchQuotesBatch(equitySymbols),
+  ]);
+
+  const items = rows.map((r) => {
+    let price = 0;
+    let change = 0;
+    let changePct = 0;
+    if (r.assetType === "index") {
+      const idx = indices.indices.find((i) => i.symbol === r.symbol);
+      if (idx) {
+        price = idx.price;
+        change = idx.change;
+        changePct = idx.changePct;
       }
-      return {
-        id: r.id,
-        symbol: r.symbol,
-        assetType: r.assetType,
-        price,
-        change,
-        changePct,
-      };
-    }),
-  );
+    } else {
+      const q = quotes.get(r.symbol.toUpperCase());
+      if (q) {
+        price = q.price;
+        change = q.change;
+        changePct = q.changePct;
+      }
+    }
+    return {
+      id: r.id,
+      symbol: r.symbol,
+      assetType: r.assetType,
+      price,
+      change,
+      changePct,
+    };
+  });
 
   res.json(
     GetWatchlistResponse.parse({
@@ -67,7 +71,6 @@ router.post("/watchlist", requireAuth, async (req: AuthedRequest, res) => {
     return;
   }
   const { symbol, assetType } = parse.data;
-  // De-dupe
   const existing = await db
     .select()
     .from(watchlistTable)

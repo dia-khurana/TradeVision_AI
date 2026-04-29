@@ -1,19 +1,13 @@
 import { Router, type IRouter } from "express";
-import { yahooChart } from "../lib/yahoo";
+import { fetchHistoryRaw } from "../lib/marketService";
 import { GetUsHistoryResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
 router.get("/us/:symbol", async (req, res) => {
   const sym = String(req.params["symbol"] || "").toUpperCase();
-  const candles = await yahooChart(sym, "6mo", "1d");
-  res.json(
-    GetUsHistoryResponse.parse({
-      symbol: sym,
-      candles,
-      updatedAt: new Date().toISOString(),
-    }),
-  );
+  const payload = await fetchHistoryRaw(sym);
+  res.json(GetUsHistoryResponse.parse(payload));
 });
 
 export default router;
