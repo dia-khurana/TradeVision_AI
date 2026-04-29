@@ -1,0 +1,615 @@
+Build **TradeVision AI** — a fully working, real-time intelligent trading platform for one demo account. Everything must actually work. Light theme. Premium 3D aesthetic. Zero placeholders. Zero fake data.
+
+---
+
+## CORE RULE
+One demo account: `demo@tradevision.in` / `TradeVision@2025`. When this user logs in, they get a fully loaded, live trading analyst platform — real prices, real news, real charts, real AI analysis. Everything works as if they are a real trader.
+
+---
+
+## TECH STACK
+
+**Frontend:** React 18 + Vite, Three.js (3D hero), Framer Motion, TradingView Lightweight Charts library (`lightweight-charts` npm), Recharts, Tailwind CSS, React Router v6, Socket.io-client, Axios
+
+**Backend:** Node.js + Express, Socket.io, node-cron, better-sqlite3, jsonwebtoken, bcrypt, axios, rss-parser, node-fetch
+
+**AI:** Use Google Gemini API (`gemini-1.5-flash`) for the AI chatbot — accepts text + base64 image (vision supported). Free tier: 60 requests/minute, no billing required. Get free API key from `https://aistudio.google.com`. Store in `.env` as `GEMINI_API_KEY`. Use the official `@google/generative-ai` npm package.
+
+**Charts:** TradingView Lightweight Charts for all OHLC/candlestick charts. Recharts for portfolio pie, P&L bar, bot performance.
+
+**Run:** concurrently — frontend port 5173, backend port 3001. Single `npm run dev`.
+
+---
+
+## DESIGN — LIGHT THEME, PREMIUM 3D
+
+```
+--bg: #F0F4FF
+--surface: #FFFFFF
+--card: #FFFFFF with shadow: 0 4px 24px rgba(99,102,241,0.10)
+--indigo: #6366F1
+--cyan: #06B6D4
+--green: #10B981
+--red: #EF4444
+--amber: #F59E0B
+--text: #0F172A
+--muted: #64748B
+--border: rgba(99,102,241,0.12)
+```
+
+Three.js animated 3D mesh (icosahedron wireframe, indigo color, mouse-reactive rotation) on hero and login page. Glassmorphism cards. Framer Motion on all page transitions and card entrances. Vanilla-tilt.js 3D hover on feature cards. Premium feel throughout — not a basic dashboard.
+
+---
+
+## FREE REAL DATA SOURCES
+
+**Backend proxies all NSE (headers: User-Agent Mozilla/5.0, Referer https://www.nseindia.com, Cookie acquired on startup):**
+
+- Indices + VIX: `https://www.nseindia.com/api/allIndices`
+- FII/DII: `https://www.nseindia.com/api/fiidiiTradeReact`
+- NIFTY Options chain: `https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY`
+- BANKNIFTY Options: `https://www.nseindia.com/api/option-chain-indices?symbol=BANKNIFTY`
+- Stock quote: `https://www.nseindia.com/api/quote-equity?symbol=SYMBOL`
+- Stock search: `https://www.nseindia.com/api/search/autocomplete?q=QUERY`
+- Historical OHLC: `https://www.nseindia.com/api/historical/cm/equity?symbol=SYMBOL&series=EQ&from=DATE&to=DATE`
+- MF NAV data: `https://api.mfapi.in/mf` (free, no key) — search MF by name, get NAV history
+- US Stocks (free): `https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL?interval=1d&range=1mo` — works for any symbol (AAPL, TSLA, GOOGL etc)
+- Crypto: `https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,matic-network&vs_currencies=usd&include_24hr_change=true`
+- Live News: Parse RSS using `rss-parser` from `https://economictimes.indiatimes.com/markets/rss.cms` — no key, updates every 5 min
+- Global news: `https://feeds.feedburner.com/ndtvprofit-latest` RSS — parse same way
+
+NSE cookie: on startup hit `https://www.nseindia.com`, store `set-cookie` header, pass in all NSE calls. Refresh every 90 minutes.
+
+---
+
+## DATABASE
+
+```sql
+CREATE TABLE users (id, email, password_hash, name, plan, avatar_initials, created_at);
+CREATE TABLE market_cache (key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER);
+CREATE TABLE signals (id, symbol, action, entry, target, sl, type, strategy, confidence, reasoning, created_at);
+CREATE TABLE bots (id, user_id, name, type, config TEXT, status, capital, pnl, trades_count, win_rate, created_at);
+CREATE TABLE bot_trades (id, bot_id, symbol, action, price, qty, pnl, executed_at);
+CREATE TABLE portfolio (id, user_id, symbol, asset_type, qty, avg_price, current_price, pnl, sector, updated_at);
+CREATE TABLE watchlist (id, user_id, symbol, asset_type, added_at);
+CREATE TABLE alerts_table (id, user_id, type, message, severity, is_read, created_at);
+CREATE TABLE news_cache (id, title, summary, source, url, published_at, category);
+CREATE TABLE chat_history (id, user_id, role, content, has_image, created_at);
+CREATE TABLE mf_watchlist (id, user_id, scheme_code, name, nav, added_at);
+```
+
+**Seed demo account with:**
+- 10 portfolio positions: RELIANCE (50 qty, avg ₹2,800), HDFCBANK (30, ₹1,580), INFY (40, ₹1,480), TCS (15, ₹3,200), TATASTEEL (100, ₹140), BAJFINANCE (8, ₹7,100), ICICIBANK (60, ₹1,050), SBIN (80, ₹780), WIPRO (45, ₹480), ITC (120, ₹420)
+- 3 MF in watchlist: Mirae Asset Large Cap, PPFAS Flexicap, Quant Small Cap
+- Watchlist: NIFTY, BANKNIFTY, AAPL, TSLA, BTC, ZOMATO, ADANIENT
+- 3 active bots with 30 days of simulated trade history seeded in bot_trades
+
+---
+
+## BACKEND ROUTES
+
+```
+POST   /api/auth/login
+GET    /api/auth/verify
+
+GET    /api/market/indices          NIFTY/BANKNIFTY/SENSEX/MIDCAP/VIX live
+GET    /api/market/fii-dii          today + week + month flows
+GET    /api/market/options/nifty    full options chain computed
+GET    /api/market/options/banknifty
+GET    /api/market/quote/:symbol    any NSE equity live quote
+GET    /api/market/history/:symbol  OHLC history for charts (30 days)
+GET    /api/market/us/:symbol       Yahoo Finance proxy for US stocks
+GET    /api/market/crypto           BTC/ETH/MATIC prices
+GET    /api/market/search?q=        NSE autocomplete search
+GET    /api/market/news             parsed ET + NDTV RSS, last 20 articles
+GET    /api/market/mf/search?q=     mutual fund search via mfapi.in
+GET    /api/market/mf/:code         MF NAV history
+
+GET    /api/signals                 all computed signals
+GET    /api/signals/fo              F&O signals with strike details
+
+GET    /api/portfolio               user holdings with live P&L
+GET    /api/watchlist               user watchlist
+POST   /api/watchlist               add symbol
+DELETE /api/watchlist/:symbol       remove
+
+GET    /api/bots                    list bots
+POST   /api/bots                    create bot
+PUT    /api/bots/:id/toggle         start/stop
+GET    /api/bots/:id/trades         trade history
+GET    /api/bots/:id/performance    P&L chart data
+
+GET    /api/screener?filters=       screener with RSI/sector/mcap filters
+GET    /api/alerts                  user alerts
+POST   /api/alerts/read/:id         mark read
+
+POST   /api/chat                    AI chat — body: {message, imageBase64?, history[]} — calls Gemini API
+```
+
+---
+
+## SIGNAL ENGINE (every 30s, real data)
+
+Track 15 stocks: RELIANCE, HDFCBANK, INFY, TCS, TATASTEEL, BAJFINANCE, ICICIBANK, AXISBANK, SBIN, WIPRO, ZOMATO, ADANIENT, HCLTECH, MARUTI, LTIM
+
+Rules:
+- **BUY:** price > open >0.5% AND FII net buy AND VIX<16 AND (price - low)/(high - low) > 0.6
+- **STRONG BUY:** all BUY + confidence >80%
+- **SELL:** price < open >0.5% AND CE OI > PE OI at ATM
+- **F&O BUY signal:** PCR > 1.2 at NIFTY level
+- **F&O SELL signal:** PCR < 0.8
+- **VIX >20:** override all to HOLD, fire alert
+- Compute confidence 0–100, show only >55%
+- Store reasoning string: "FII +₹1240Cr | PCR 1.18 bullish | Price above 5D avg | Confidence: 84%"
+
+---
+
+## BOT ENGINE (paper trading, real prices)
+
+Every 30s each active bot evaluates using live cached prices:
+
+**Momentum Bot:** when signal confidence >80% fires BUY. Auto exit when price hits target or SL. Records trade in bot_trades with real NSE price.
+
+**Grid Bot:** user sets range (e.g. 24000–25000) and grids (e.g. 10). Bot buys 1 unit at each grid level below current price, sells at grid above. Uses real NIFTY price from cache.
+
+**DCA Bot:** every N minutes, buys ₹X worth of chosen stock at current live price. Tracks average cost correctly.
+
+**Options Expiry Bot:** Thursday only. At 09:20 reads real ATM strike from options cache. Simulates selling straddle. At 15:15 closes. Records P&L using real LTP from options chain.
+
+All bot P&L, win rate, trade count update in real time → push via Socket.io `bot_update` event.
+
+---
+
+## AI CHATBOT — CLAUDE API, VISION ENABLED
+
+`POST /api/chat` calls Gemini API (`gemini-1.5-flash`) using `@google/generative-ai` npm package with:
+
+**System prompt injected with live market data every call:**
+```
+You are TradeVision AI — India's most advanced trading analyst. 
+You have real-time access to:
+- NIFTY: {live_value} ({change}%)
+- BANKNIFTY: {live_value} ({change}%)  
+- India VIX: {vix} — posture: {posture}
+- FII flow today: {fii_flow}
+- PCR: {pcr} — {pcr_bias}
+- Top signals: {signals_summary}
+- Latest news: {news_headlines}
+
+You are an expert SEBI-aware trading analyst. When user asks about a stock:
+1. Give current price context
+2. Give BUY/SELL/HOLD recommendation with clear reasoning
+3. Give entry range, target range, stop-loss level
+4. Mention relevant risks
+5. Mention applicable technical indicators (RSI, MACD, BB, EMA)
+6. For F&O: mention PCR, OI, max pain context
+7. For MF: give category analysis and peer comparison
+8. Always end with: "This is educational analysis, not SEBI registered advice."
+
+For image analysis requests:
+- Identify the chart/stock shown
+- Read price levels, patterns, indicators visible
+- Identify chart patterns (head & shoulders, double top/bottom, breakout, triangle, flag)
+- Give entry range, target, stop-loss based on what you see
+- Be specific with price levels
+
+If user uploads an image/screenshot of a chart:
+- Identify the stock/index shown
+- Read visible price levels, patterns, indicators
+- Give detailed technical analysis of what you see
+- Identify chart patterns (head & shoulders, double top, breakout, etc.)
+- Give actionable recommendation based on chart
+```
+
+Supports: text queries, image upload (base64), conversation history (last 10 messages). Store all chat in `chat_history` table.
+
+Frontend chat UI: floating button bottom-right. Opens full panel. Message input + image upload button (paperclip). Shows typing indicator. Renders markdown in responses. Suggested quick prompts: "Analyse NIFTY today", "Should I buy RELIANCE?", "What's the market posture?", "Explain this chart" (triggers image upload).
+
+---
+
+## PAGES & SCREENS
+
+### `/` LANDING PAGE
+- Glassmorphism sticky nav. Live NIFTY + BANKNIFTY in nav bar (real data on load).
+- Hero: Three.js 3D icosahedron wireframe background (indigo), mouse-reactive. Bold headline. Live index prices. Two CTAs.
+- Real-time stats bar: 4 indices updating every 30s.
+- Horizontal scrolling news ticker with real ET Markets headlines.
+- Features grid: 9 cards with 3D tilt hover.
+- Bot showcase: 4 animated bot type cards.
+- Live news section: 6 real news cards.
+- Pricing: 3 tier glassmorphism cards.
+- Demo credentials CTA box.
+- Footer with SEBI disclaimer.
+
+### `/login`
+- Split: left = Three.js 3D animation, right = form.
+- Demo credentials auto-fill banner.
+- JWT login → redirect dashboard.
+- Credentials: `demo@tradevision.in` / `TradeVision@2025`
+
+### `/dashboard` — FULL TRADING PLATFORM
+
+**Layout:** Left sidebar (240px, collapsible) + top bar + main content area
+
+**Sidebar menu (all pages functional):**
+```
+OVERVIEW
+  ├── Dashboard (home)
+  ├── Watchlist
+  └── Portfolio
+
+MARKETS  
+  ├── Indian Equities
+  ├── F&O Trading
+  ├── Intraday
+  ├── Mutual Funds
+  ├── US Stocks
+  ├── Crypto
+  └── IPO Tracker
+
+INTELLIGENCE
+  ├── AI Signals
+  ├── Stock Screener
+  ├── Options Chain
+  ├── FII/DII Tracker
+  └── Technical Analysis
+
+AUTOMATION
+  ├── My Bots
+  └── Copy Trading
+
+NEWS & RESEARCH
+  ├── Live News
+  └── Earnings Calendar
+
+ACCOUNT
+  ├── Tax & P&L
+  └── Settings
+```
+
+**Top bar:** Live IST clock, Market Open/Closed badge (green pulse if open), global search bar (searches stocks + MF + crypto), VIX pill, notification bell, user avatar.
+
+---
+
+### DASHBOARD HOME (`/dashboard`)
+- AI posture card: dynamic message from real VIX + PCR + FII. E.g. "VIX 12.8 LOW · FII buyers ₹1,240Cr · PCR 1.18 Bullish → Posture: AGGRESSIVE. Sell premium on Nifty dips."
+- 4 index cards: live price, change %, mini TradingView chart.
+- Portfolio summary: total value, today's P&L, overall P&L — live.
+- Signals strip: top 5 signals with badges.
+- News strip: last 3 headlines.
+- Active bots P&L strip.
+
+---
+
+### WATCHLIST (`/dashboard/watchlist`)
+- Table: symbol, LTP (live, updates via socket), day change %, volume, 52W high/low.
+- Add symbol via search bar — searches NSE + US + crypto.
+- Click any row → opens stock detail modal with full chart + AI analysis button.
+- Live prices update every 30s via Socket.io.
+
+---
+
+### PORTFOLIO (`/dashboard/portfolio`)
+- Holdings table: symbol, qty, avg price, LTP (live), day P&L, total P&L, P&L %.
+- Pie chart: allocation by stock (Recharts).
+- Bar chart: sector allocation.
+- Overall P&L card, XIRR estimate.
+- All prices live.
+
+---
+
+### INDIAN EQUITIES + STOCK DETAIL (`/dashboard/equities`)
+- Search any NSE stock (uses NSE autocomplete API).
+- Click stock → full detail page:
+  - TradingView Lightweight Chart: candlestick OHLC from NSE historical API. Toggle 1D/1W/1M/3M/6M/1Y.
+  - Indicators overlay panel: EMA 9/21/50, Bollinger Bands, Volume bars — all rendered on chart using lightweight-charts built-in primitives.
+  - RSI panel below main chart (computed from OHLC data).
+  - MACD panel below RSI (computed from OHLC).
+  - Live quote card: LTP, open, high, low, volume, 52W H/L, delivery %.
+  - Signal card for this stock from signal engine.
+  - "Ask AI" button → opens chat pre-filled with stock name.
+  - Company info: sector, market cap, PE ratio (from NSE quote response).
+  - Related news: filtered from news cache.
+
+---
+
+### F&O TRADING (`/dashboard/fo`)
+- Tabs: NIFTY Options | BANKNIFTY Options | F&O Signals
+- Options chain table: strikes ±10 from ATM. CE OI, CE Chg OI, CE LTP | Strike | PE LTP, PE Chg OI, PE OI. Color code by OI concentration. ATM strike highlighted.
+- PCR gauge (Recharts radial bar).
+- Max pain indicator with explanation.
+- IV Rank + VIX display.
+- F&O signals from signal engine.
+- Expiry countdown timer (days:hours:minutes to next Thursday).
+
+---
+
+### INTRADAY (`/dashboard/intraday`)
+- Same as equities but default chart interval = 5 minute candles (use NSE intraday endpoint or build from tick cache).
+- Intraday signals only (signals where type = "Intraday").
+- Pre-market analysis card (GIFT Nifty context from allIndices response).
+- Market depth context: VIX, PCR, FII direction as intraday context card.
+
+---
+
+### MUTUAL FUNDS (`/dashboard/mf`)
+- Search MF by name → hits `https://api.mfapi.in/mf/search?q=QUERY` → show results.
+- Click MF → detail page:
+  - NAV history chart (TradingView Lightweight Chart, line chart) from mfapi.in.
+  - Current NAV, 1D change, 1W, 1M, 1Y returns (computed from NAV history).
+  - Fund info: category, AUM (static for demo), fund house.
+  - Add to watchlist button.
+- MF watchlist shows NAV updates.
+- SIP Calculator: input amount + years + expected return → show maturity amount with chart.
+
+---
+
+### US STOCKS (`/dashboard/us`)
+- Search US symbol (AAPL, TSLA, GOOGL, MSFT, NVDA etc).
+- Fetch from Yahoo Finance proxy: `https://query1.finance.yahoo.com/v8/finance/chart/SYMBOL?interval=1d&range=3mo`
+- Show: TradingView Lightweight Chart with OHLC data, current price in USD + INR equivalent (use USD/INR from a static rate or coingecko).
+- Same indicators as Indian equities: EMA, BB, RSI, MACD.
+- "Ask AI about this stock" button.
+
+---
+
+### CRYPTO (`/dashboard/crypto`)
+- BTC, ETH, MATIC, SOL prices from CoinGecko free API.
+- Mini cards with price, 24h change.
+- Click → chart from CoinGecko: `https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30`
+- Render as TradingView Lightweight Chart line chart.
+
+---
+
+### AI SIGNALS (`/dashboard/signals`)
+- Full signals table: all 15 stocks + F&O signals.
+- Columns: symbol, action badge, entry, target, SL, strategy, confidence bar, reasoning (expandable).
+- Filter: All / Intraday / Swing / Positional / F&O.
+- Sort: by confidence, by P&L potential.
+- Signal accuracy tracker: today's hit rate (signals that hit target vs SL from bot_trades).
+- Each row: click → expand → show full reasoning + "Open Chart" + "Ask AI".
+
+---
+
+### STOCK SCREENER (`/dashboard/screener`)
+- Filter panel: Sector (dropdown), Market Cap (Large/Mid/Small), RSI range slider, Price range, FII holding change direction, Signal type.
+- Results from a pre-built list of 50 NSE stocks — fetch live quotes for each on filter apply.
+- Results table: symbol, LTP, change, RSI (computed), signal, sector.
+- Click row → stock detail.
+
+---
+
+### OPTIONS CHAIN (`/dashboard/options`)
+- Full page options chain for NIFTY and BANKNIFTY (tab toggle).
+- Real data from NSE options endpoint.
+- Table: all strikes, CE OI, CE Chg OI, CE IV, CE LTP | Strike | PE LTP, PE IV, PE Chg OI, PE OI.
+- Highlight ATM row in amber.
+- Max pain strike highlighted in indigo.
+- PCR displayed prominently.
+- OI chart: bar chart showing CE vs PE OI distribution across strikes (Recharts).
+
+---
+
+### FII/DII TRACKER (`/dashboard/fii`)
+- Today's net flow (real from NSE API): FII buy, FII sell, FII net. DII buy, DII sell, DII net.
+- This week trend: bar chart of last 5 days FII net (use cached values built up daily).
+- Market impact context: "FII bought ₹6,840Cr this week → historically bullish for 3–5 sessions."
+- Auto-generated alert if FII sells >₹3,000Cr.
+
+---
+
+### MY BOTS (`/dashboard/bots`)
+- Bot cards: name, type badge, status toggle (running/stopped), capital, P&L (green/red), win rate, trade count.
+- Create bot: multi-step modal. Step 1: choose type (Momentum/Grid/DCA/Expiry). Step 2: configure (capital, stock/index, risk level, parameters). Step 3: confirm + launch.
+- Bot detail page: P&L line chart (Recharts), trade history table (all from bot_trades with real prices and timestamps), current status.
+- All stats update live via Socket.io `bot_update` event.
+
+---
+
+### LIVE NEWS (`/dashboard/news`)
+- Cards: headline, source badge, time ago, category tag, external link.
+- Categories: All / Earnings / Policy / Global / IPO / F&O / Economy.
+- Auto-refresh every 5 minutes.
+- Breaking news banner if any headline contains keywords: "RBI", "Budget", "circuit", "crash", "surge".
+- "Ask AI about this news" button on each card.
+
+---
+
+### TECHNICAL ANALYSIS (`/dashboard/technical`)
+- Search any stock.
+- Full screen TradingView Lightweight Chart.
+- Indicator panel: toggle EMA9, EMA21, EMA50, BB, Volume, RSI, MACD on/off.
+- All indicators computed from OHLC data fetched from NSE/Yahoo.
+- Timeframe: 5m / 15m / 1h / 1D / 1W.
+- Pattern detector: scan last 30 candles, detect and label: Doji, Hammer, Engulfing, Double Top/Bottom (rule-based detection on OHLC data).
+- "Get AI Analysis" button → sends last 30 OHLC values as text to Claude API → returns detailed technical analysis.
+
+---
+
+### TAX & P&L (`/dashboard/tax`)
+- All bot trades from bot_trades table listed.
+- Each trade tagged: Speculative (intraday equity), STCG (held <1yr), LTCG (held >1yr), F&O (non-speculative business income per Indian tax law).
+- Running totals: total STCG, total LTCG, F&O income, STT paid (0.025% per trade), estimated tax liability.
+- Export to CSV button (generates downloadable CSV of all trades).
+
+---
+
+### GLOBAL SEARCH (top bar)
+- Searches simultaneously: NSE stocks (autocomplete API), MF names (mfapi), crypto symbols (static list), US stocks (static popular list).
+- Shows results grouped by category.
+- Click result → navigates to that asset's detail page.
+
+---
+
+## AI CHATBOT (floating, all pages)
+
+- Floating button bottom-right (indigo, animated pulse).
+- Opens panel (400px wide, full height on mobile).
+- Message input + paperclip icon for image upload.
+- Image upload: converts to base64, sends to `/api/chat` → Claude vision analyses it.
+- Conversation history maintained per session (last 10 messages in state, stored in DB).
+- System prompt injected with live market data every single API call (VIX, NIFTY, BANKNIFTY, FII, PCR, top signals, latest 3 news headlines).
+- Suggested prompts (chips): "Market posture today?", "Analyse NIFTY chart", "Should I buy RELIANCE?", "Explain RSI indicator", "Best F&O strategy today?"
+- Typing indicator (animated dots) while Claude responds.
+- Renders markdown: bold, bullets, tables all formatted in chat.
+- "Upload chart screenshot" → AI reads chart image and gives full technical analysis.
+
+---
+
+## SOCKET.IO EVENTS
+
+Server emits every 30s:
+```
+market_update: { indices, vix, fii, pcr, maxPain }
+signals_update: { signals[] }
+bot_update: { botId, pnl, trades, winRate }
+news_update: { articles[] }  (every 5min)
+alert_new: { message, severity }
+```
+
+---
+
+## MOBILE RESPONSIVE
+
+- <768px: sidebar hidden, bottom nav (Home/Markets/Signals/Bots/AI).
+- All charts resize correctly (lightweight-charts responsive).
+- Bot creation form works on mobile.
+- AI chat opens as full-screen overlay on mobile.
+- 3D Three.js disabled on mobile (check `window.innerWidth < 768`).
+- Touch-friendly: all tap targets min 44px.
+
+---
+
+## DEMO ACCOUNT EXPERIENCE
+
+On login, demo user sees:
+- Real live market data everywhere.
+- Pre-seeded portfolio with 10 positions showing live P&L.
+- 3 active bots with 30 days of trade history.
+- Watchlist with 7 symbols showing live prices.
+- 3 MF in watchlist with current NAV.
+- Yellow banner: "Demo Mode — Paper trading with real market data."
+- AI chatbot fully working with Claude API.
+- All pages navigable, all charts load, all data real.
+
+---
+
+## ENV FILE
+
+```
+GEMINI_API_KEY=your_gemini_api_key_here
+JWT_SECRET=tradevision_secret_2025
+PORT=3001
+VITE_API_URL=http://localhost:3001
+```
+
+---
+
+## CRITICAL RULES
+
+- Zero hardcoded prices. Every price from real API or computed from real data.
+- NSE cookie refresh every 90 minutes.
+- Graceful fallback: NSE down → show cached data + "Last updated HH:MM IST" badge.
+- All API errors → user-friendly message, never white screen.
+- JWT 24hr expiry, protected routes redirect to login.
+- `npm run dev` starts everything with one command.
+- Charts must actually render with real OHLC data — not empty boxes.
+- AI chat must actually call Gemini API (`gemini-1.5-flash`) and return real analysis. Use `@google/generative-ai` npm package. For image upload: convert to base64 and pass as `inlineData` part in Gemini multimodal request.
+
+---
+
+## GEMINI API IMPLEMENTATION (backend `/api/chat` route)
+
+Install: `npm install @google/generative-ai`
+
+```javascript
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+router.post("/chat", authenticateToken, async (req, res) => {
+  const { message, imageBase64, imageMimeType, history } = req.body;
+
+  // Inject live market data into system prompt
+  const cache = db.prepare("SELECT value FROM market_cache WHERE key = ?");
+  const indices = JSON.parse(cache.get("indices")?.value || "{}");
+  const fii     = JSON.parse(cache.get("fii_dii")?.value  || "{}");
+  const options = JSON.parse(cache.get("options_nifty")?.value || "{}");
+  const news    = db.prepare("SELECT title FROM news_cache ORDER BY published_at DESC LIMIT 3").all();
+
+  const systemPrompt = `You are TradeVision AI — India's most advanced AI trading analyst.
+
+LIVE MARKET DATA RIGHT NOW:
+- NIFTY 50: ${indices.nifty?.last || "N/A"} (${indices.nifty?.change || "N/A"}%)
+- BANKNIFTY: ${indices.banknifty?.last || "N/A"} (${indices.banknifty?.change || "N/A"}%)
+- India VIX: ${indices.vix?.last || "N/A"} — ${parseFloat(indices.vix?.last) < 14 ? "LOW (sell premium)" : parseFloat(indices.vix?.last) > 20 ? "HIGH (buy hedges)" : "MODERATE"}
+- FII Net Today: ${fii.today?.fii_net || "N/A"} Cr
+- NIFTY PCR: ${options.pcr || "N/A"} — ${parseFloat(options.pcr) > 1.2 ? "Bullish bias" : parseFloat(options.pcr) < 0.8 ? "Bearish bias" : "Neutral"}
+- Max Pain: ${options.maxPain || "N/A"}
+- Latest News: ${news.map(n => n.title).join(" | ")}
+
+You are an expert SEBI-aware trading analyst for Indian markets. When asked about any stock:
+1. Give current price context and trend direction
+2. Give clear BUY / SELL / HOLD recommendation with reasoning
+3. Give specific entry range, target range, stop-loss level in rupees
+4. Mention key risks to watch
+5. Reference relevant indicators: RSI, MACD, EMA, Bollinger Bands, OI data where relevant
+6. For F&O: reference PCR, OI buildup, max pain, IV rank
+7. For Mutual Funds: give category analysis, risk profile, peer comparison
+8. For US stocks: give USD price context + INR equivalent
+9. If user uploads a chart screenshot: identify stock, read all visible patterns and indicators, give actionable trade setup
+10. Always end: "Educational analysis only — not SEBI registered investment advice."
+
+Respond in clear, structured format. Use bullet points. Be specific with numbers. Be confident like a professional trader.`;
+
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    systemInstruction: systemPrompt,
+  });
+
+  // Build conversation history for Gemini
+  const geminiHistory = (history || []).slice(-8).map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+
+  const chat = model.startChat({ history: geminiHistory });
+
+  // Build current message parts
+  const parts = [{ text: message }];
+  if (imageBase64 && imageMimeType) {
+    parts.push({
+      inlineData: { mimeType: imageMimeType, data: imageBase64 }
+    });
+  }
+
+  const result = await chat.sendMessage(parts);
+  const response = result.response.text();
+
+  // Store in DB
+  db.prepare("INSERT INTO chat_history (user_id, role, content, has_image, created_at) VALUES (?,?,?,?,?)").run(req.user.id, "user", message, imageBase64 ? 1 : 0, Date.now());
+  db.prepare("INSERT INTO chat_history (user_id, role, content, has_image, created_at) VALUES (?,?,?,?,?)").run(req.user.id, "assistant", response, 0, Date.now());
+
+  res.json({ response });
+});
+```
+
+**Frontend image upload flow:**
+```javascript
+// When user selects image file
+const handleImageUpload = (file) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const base64 = e.target.result.split(",")[1]; // strip data:image/...;base64,
+    const mimeType = file.type; // e.g. image/png
+    sendMessage(inputText, base64, mimeType);
+  };
+  reader.readAsDataURL(file);
+};
+```
+
+**How to get free Gemini API key (30 seconds):**
+1. Go to `https://aistudio.google.com`
+2. Sign in with Google account
+3. Click "Get API Key" → "Create API key"
+4. Copy key → paste into Replit Secrets as `GEMINI_API_KEY`
+5. Free tier: 60 requests/minute, 1500 requests/day — more than enough for demo
