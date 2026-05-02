@@ -17,10 +17,13 @@ import { SignalsTable } from "@/components/SignalsTable";
 import { FiiDiiPanel } from "@/components/FiiDiiPanel";
 import { OptionsSnapshot } from "@/components/OptionsSnapshot";
 import { AlertsList } from "@/components/AlertsList";
+import { TopMovers } from "@/components/TopMovers";
+import { SectorHeatmap } from "@/components/SectorHeatmap";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Briefcase, TrendingUp, ArrowRight, Activity } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { fmtCompact, fmtSignedINR, fmtPct } from "@/lib/format";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -61,8 +64,8 @@ export default function Dashboard() {
         <div className="flex gap-3 items-center">
           <div className="premium-card px-4 py-2.5">
             <div className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Portfolio</div>
-            <div className="font-extrabold text-lg font-mono">
-              ₹{totalValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+            <div className="font-extrabold text-lg font-mono" title={`₹${totalValue.toLocaleString("en-IN")}`}>
+              {fmtCompact(totalValue, true)}
             </div>
           </div>
           <div className="premium-card px-4 py-2.5">
@@ -72,8 +75,8 @@ export default function Dashboard() {
                 totalPL >= 0 ? "text-emerald-600" : "text-rose-600"
               }`}
             >
-              {totalPL >= 0 ? "+" : ""}₹{totalPL.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
-              <span className="text-xs ml-1">({totalPLPct.toFixed(2)}%)</span>
+              {fmtSignedINR(totalPL)}
+              <span className="text-xs ml-1">({fmtPct(totalPLPct)})</span>
             </div>
           </div>
         </div>
@@ -93,6 +96,9 @@ export default function Dashboard() {
           ))}
         </div>
       )}
+
+      {/* Sector heatmap — full-width pulse-of-the-market */}
+      <SectorHeatmap />
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -115,6 +121,12 @@ export default function Dashboard() {
               <SignalsTable signals={(signalsData?.signals ?? []).slice(0, 6)} />
             )}
           </div>
+
+          {fiiDiiData && (
+            <div className="h-[260px]">
+              <FiiDiiPanel data={fiiDiiData} />
+            </div>
+          )}
 
           {/* Quick links */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -141,11 +153,7 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-6">
-          {fiiDiiData && (
-            <div className="h-[260px]">
-              <FiiDiiPanel data={fiiDiiData} />
-            </div>
-          )}
+          <TopMovers />
           {optionsData && (
             <div className="h-[360px]">
               <OptionsSnapshot data={optionsData} />

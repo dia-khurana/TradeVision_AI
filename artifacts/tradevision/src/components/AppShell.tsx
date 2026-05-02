@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Button } from "./ui/button";
 import { useGetAlerts, getGetAlertsQueryKey } from "@workspace/api-client-react";
+import { MarketStatus } from "./MarketStatus";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -138,9 +139,11 @@ export function AppShell({ children }: AppShellProps) {
       <div className="flex-1 flex flex-col min-w-0">
         <div
           data-testid="demo-mode-banner"
-          className="bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 text-amber-900 border-b border-amber-200/60 px-4 py-1.5 text-center text-[11px] font-semibold"
+          className="bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 text-amber-900 border-b border-amber-200/60 px-4 py-1.5 flex items-center justify-center gap-3 text-[11px] font-semibold flex-wrap"
         >
-          Demo Mode · Live NSE/BSE quotes via Yahoo · Read-only · Connect a broker to trade live
+          <span>Demo Mode · Live NSE/BSE quotes via Yahoo · Read-only</span>
+          <span className="hidden md:inline opacity-50">|</span>
+          <MarketStatus compact />
         </div>
 
         {/* Mobile header */}

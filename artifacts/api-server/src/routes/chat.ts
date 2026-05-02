@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, json } from "express";
 import { db, chatHistoryTable } from "@workspace/db";
 import { eq, asc, desc } from "drizzle-orm";
 import { type AuthedRequest, requireAuth } from "../lib/auth";
@@ -7,7 +7,11 @@ import { geminiChat, type GeminiChatHistoryItem } from "../lib/geminiChat";
 
 const router: IRouter = Router();
 
-router.post("/chat", requireAuth, async (req: AuthedRequest, res) => {
+// Route-scoped 15mb JSON parser so chart screenshots (base64 data URLs)
+// fit without raising the global body limit (DoS surface) for every other route.
+const chatJson = json({ limit: "15mb" });
+
+router.post("/chat", chatJson, requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.sub;
   const parse = PostChatBody.safeParse(req.body);
   if (!parse.success) {

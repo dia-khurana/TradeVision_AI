@@ -26,8 +26,10 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Default global limits stay conservative to limit DoS surface across all routes.
+// The /api/chat route mounts a larger 15mb parser locally (see routes/chat.ts) for image uploads.
+app.use(express.json({ limit: "200kb" }));
+app.use(express.urlencoded({ extended: true, limit: "200kb" }));
 
 app.use("/api", router);
 

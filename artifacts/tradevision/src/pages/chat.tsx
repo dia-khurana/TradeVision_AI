@@ -22,6 +22,31 @@ async function fileToDataUrl(f: File) {
   });
 }
 
+// Down-scale large screenshots client-side so requests stay small and fast.
+async function compressImage(dataUrl: string, maxEdge = 1600, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      const scale = Math.min(1, maxEdge / Math.max(width, height));
+      const w = Math.round(width * scale);
+      const h = Math.round(height * scale);
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const ctx = c.getContext("2d");
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, w, h);
+      try {
+        resolve(c.toDataURL("image/jpeg", quality));
+      } catch {
+        resolve(dataUrl);
+      }
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 export default function Chat() {
   const qc = useQueryClient();
   const { data: history } = useGetChatHistory({
@@ -92,11 +117,27 @@ export default function Chat() {
           setMessages((p) => [...p, { role: "assistant", content: d.reply }]);
           qc.invalidateQueries({ queryKey: getGetChatHistoryQueryKey() });
         },
-        onError: () =>
-          setMessages((p) => [
-            ...p,
-            { role: "assistant", content: "Sorry, I had trouble reaching the live feed." },
-          ]),
+        onError: (err: unknown) => {
+          let detail = "AI is temporarily unavailable. Please retry.";
+          // ApiError (from @workspace/api-client-react customFetch) exposes status + data directly.
+          const e = err as {
+            status?: number;
+            data?: { error?: string } | null;
+            response?: { status?: number };
+            message?: string;
+          };
+          const status = e?.status ?? e?.response?.status;
+          if (status === 413) {
+            detail = "Image is too large. Try a smaller screenshot (under 10 MB).";
+          } else if (status === 401) {
+            detail = "Your session expired. Please sign in again.";
+          } else if (e?.data?.error) {
+            detail = e.data.error;
+          } else if (e?.message) {
+            detail = e.message;
+          }
+          setMessages((p) => [...p, { role: "assistant", content: `⚠️ ${detail}` }]);
+        },
       },
     );
   };
@@ -202,7 +243,11 @@ export default function Chat() {
               className="hidden"
               onChange={async (e) => {
                 const f = e.target.files?.[0];
-                if (f) setPendingImage(await fileToDataUrl(f));
+                if (f) {
+                  const raw = await fileToDataUrl(f);
+                  const compressed = await compressImage(raw).catch(() => raw);
+                  setPendingImage(compressed);
+                }
                 e.target.value = "";
               }}
             />
