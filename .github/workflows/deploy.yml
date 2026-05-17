@@ -10,6 +10,9 @@ permissions:
   pages: write
   id-token: write
 
+env:
+  PORT: 3000
+
 jobs:
   build:
     runs-on: ubuntu-latest
