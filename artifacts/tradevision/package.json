@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --base=/TradeVision_AI/",
-    "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
+    "dev": "vite --config vite.config.ts --configLoader runner --host 0.0.0.0",
+    "build": "vite build --configLoader runner --base=/TradeVision_AI/",
+    "serve": "vite preview --config vite.config.ts --configLoader runner --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
