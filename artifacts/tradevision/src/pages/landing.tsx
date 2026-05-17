@@ -271,9 +271,11 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-3">
-                Everything a serious Indian trader needs
+                Real-time Indian market intelligence powered by AI.
               </h2>
-              <p className="text-muted-foreground">No fluff. Just the data that matters.</p>
+              <p className="text-muted-foreground">
+                Signals, options flow, institutional activity, and AI-driven insights — all in one live dashboard.
+              </p>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
               {[
@@ -328,7 +330,7 @@ export default function Landing() {
       </main>
 
       <footer className="px-6 py-8 border-t border-indigo-100 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} TradeVision AI · For educational and demo purposes only · Not investment advice
+        © 2026 TradeVision AI · Built by Dia Khurana · For educational and demo purposes only · Not investment advice
       </footer>
     </div>
   );
