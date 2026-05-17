@@ -1,0 +1,177 @@
+Act as a senior product designer + frontend engineer for TradeVision AI.
+
+The app is already live, so do NOT redesign the whole product or break existing structure. Keep the current branding, sidebar, dashboard layout, purple accent theme, and existing routes. Make focused improvements that make the platform feel more credible, trader-grade, live, and AI-powered.
+
+Goal:
+Upgrade the dashboard from “clean demo UI” to “serious Indian market intelligence terminal powered by AI.”
+
+Implement the following changes:
+
+1. Remove or fix the broken Options Chain widget
+- Do not show “Waiting for NSE option-chain access” on the main dashboard.
+- If real options data is unavailable, replace it with a polished demo/snapshot card.
+- Show:
+  - NIFTY Options Snapshot
+  - PCR
+  - Max Pain
+  - Highest Call OI
+  - Highest Put OI
+  - Bias: Bullish / Bearish / Neutral
+  - Last updated timestamp
+- Make it look intentional, not broken.
+
+2. Add an “AI Market Pulse” card near the top of the dashboard
+Add a new card below the index cards or beside the sector heatmap.
+
+Content should include:
+- Market Bias: Bullish / Bearish / Neutral
+- Strongest Sector
+- Weakest Sector
+- Volatility Status
+- AI Confidence %
+- Short AI summary sentence
+
+Example:
+“AI detects positive market breadth led by Energy and Auto, while Banking remains weak. Volatility is moderate; avoid overleveraged trades.”
+
+Make it visually premium and clearly AI-branded.
+
+3. Add small sparklines / mini charts
+Add tiny trend sparklines to:
+- NIFTY 50 card
+- NIFTY BANK card
+- NIFTY MIDCAP 100 card
+- INDIA VIX card
+- Top movers list if possible
+
+Use lightweight chart/SVG/CSS implementation. Do not add heavy dependencies unless already installed.
+
+4. Make confidence values feel realistic
+Currently many signal confidence values look repeated/fake.
+Update the signal table so each signal has varied confidence values like:
+- 64%
+- 71%
+- 78%
+- 83%
+- 56%
+
+Color-code confidence:
+- 80%+ strong
+- 65–79% medium
+- below 65% weak
+
+Keep the existing signal table columns.
+
+5. Add “Why this signal?” explanation
+For each signal row, add a small info icon/button or expandable section.
+When clicked/expanded, show short reasoning such as:
+- Trend breakout above VWAP
+- Volume confirmation
+- Sector strength alignment
+- OI support zone
+- Momentum score improving
+
+This is important for trust. Signals should not feel random.
+
+6. Add live-feeling behavior
+Add subtle real-time feel without overdoing it:
+- “Updated X sec ago” timestamps
+- pulsing live indicator
+- small refresh animation on market cards
+- ticker values should visually feel live
+- keep refresh interval around 30 seconds
+
+Do not make aggressive blinking animations.
+
+7. Improve FII/DII Activity card
+Keep the existing design but make it more analytical.
+Add:
+- Net flow label
+- Today vs Previous session
+- Institutional bias: Positive / Negative / Mixed
+- small horizontal flow visualization
+- short interpretation line
+
+Example:
+“FII buying is positive, but DII selling pressure keeps broader sentiment mixed.”
+
+8. Reduce excess whitespace slightly
+Keep the layout beautiful but make it denser.
+Reduce:
+- card padding slightly
+- vertical gaps
+- oversized empty areas
+
+Do not make it cluttered.
+
+9. Improve text contrast/readability
+Some labels are too light.
+Increase contrast for:
+- small labels
+- metadata
+- table text
+- sidebar labels
+- card subtitles
+
+Keep premium aesthetic.
+
+10. Add a Market Mood widget
+Add a small widget showing:
+- Market Mood: Risk-On / Risk-Off / Choppy / Trending / Volatile
+- Breadth score
+- Momentum score
+- Volatility score
+
+This should help traders understand the market instantly.
+
+11. Make AI more visible in the product
+Where relevant, add small AI labels or AI-generated insight text.
+TradeVision AI should feel like it is analyzing the market, not just displaying data.
+
+12. Keep responsive design intact
+Ensure the dashboard still works on:
+- desktop
+- tablet
+- mobile
+
+On smaller screens:
+- cards should stack properly
+- sidebar should not break
+- tables should scroll horizontally if needed
+
+13. Do not remove existing features/routes
+Keep:
+- Dashboard
+- Signals
+- F&O Options
+- Screener
+- News
+- Portfolio
+- Watchlist
+- Bots
+- Alerts
+- AI Chat
+
+Only enhance current UI and dashboard behavior.
+
+14. Final quality pass
+After changes:
+- no broken empty widgets
+- no placeholder-looking text
+- no console errors
+- no layout overflow
+- dashboard should look live, credible, and trader-grade
+
+Design direction:
+Premium fintech terminal, not playful startup.
+Keep the purple TradeVision identity but add more data density, AI insight, and trader trust.
+
+Priority order:
+1. Fix Options Chain widget
+2. Add AI Market Pulse
+3. Add sparklines
+4. Add signal explanations
+5. Improve confidence realism
+6. Improve FII/DII intelligence
+7. Add Market Mood
+8. Polish spacing and contrast

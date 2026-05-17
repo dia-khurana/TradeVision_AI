@@ -19,6 +19,9 @@ import { OptionsSnapshot } from "@/components/OptionsSnapshot";
 import { AlertsList } from "@/components/AlertsList";
 import { TopMovers } from "@/components/TopMovers";
 import { SectorHeatmap } from "@/components/SectorHeatmap";
+import { AiMarketPulse } from "@/components/AiMarketPulse";
+import { MarketMood } from "@/components/MarketMood";
+import { LiveTimestamp } from "@/components/LiveTimestamp";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Briefcase, TrendingUp, ArrowRight, Activity } from "lucide-react";
@@ -51,15 +54,16 @@ export default function Dashboard() {
   const totalPLPct = portfolioData?.totalPnlPct ?? 0;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 max-w-7xl mx-auto">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">
             Hey, <span className="gradient-text">{user?.name?.split(" ")[0] ?? "Trader"}</span> 👋
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Live Indian markets dashboard · Updated every 30 seconds
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-slate-600 text-sm">Live Indian markets dashboard</p>
+            <LiveTimestamp updatedAt={indicesData?.updatedAt} />
+          </div>
         </div>
         <div className="flex gap-3 items-center">
           <div className="premium-card px-4 py-2.5">
@@ -84,26 +88,29 @@ export default function Dashboard() {
 
       {/* Indices */}
       {indicesLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-[140px] rounded-2xl" />
+            <Skeleton key={i} className="h-[120px] rounded-2xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {indicesData?.indices.map((q) => (
             <IndexCard key={q.symbol} quote={q} />
           ))}
         </div>
       )}
 
-      {/* Sector heatmap — full-width pulse-of-the-market */}
+      {/* AI Market Pulse — full width hero */}
+      <AiMarketPulse />
+
+      {/* Sector heatmap */}
       <SectorHeatmap />
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-extrabold tracking-tight flex items-center gap-2">
                 <Activity className="h-5 w-5 text-indigo-500" /> Latest Signals
@@ -123,7 +130,7 @@ export default function Dashboard() {
           </div>
 
           {fiiDiiData && (
-            <div className="h-[260px]">
+            <div className="min-h-[260px]">
               <FiiDiiPanel data={fiiDiiData} />
             </div>
           )}
@@ -139,12 +146,12 @@ export default function Dashboard() {
               const Icon = q.icon;
               return (
                 <Link key={q.href} href={q.href}>
-                  <div className="premium-card p-4 cursor-pointer">
-                    <div className={`h-9 w-9 rounded-xl bg-gradient-to-br ${q.color} text-white flex items-center justify-center shadow-md mb-2`}>
+                  <div className="premium-card p-3 cursor-pointer">
+                    <div className={`h-8 w-8 rounded-xl bg-gradient-to-br ${q.color} text-white flex items-center justify-center shadow-md mb-2`}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="font-bold text-sm">{q.label}</div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Open</div>
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Open</div>
                   </div>
                 </Link>
               );
@@ -152,15 +159,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
+          <MarketMood />
           <TopMovers />
-          {optionsData && (
-            <div className="h-[360px]">
-              <OptionsSnapshot data={optionsData} />
-            </div>
-          )}
+          {optionsData && <OptionsSnapshot data={optionsData} />}
           {alertsData && (
-            <div className="h-[300px]">
+            <div className="min-h-[280px]">
               <AlertsList alerts={(alertsData.alerts ?? []).slice(0, 6)} />
             </div>
           )}

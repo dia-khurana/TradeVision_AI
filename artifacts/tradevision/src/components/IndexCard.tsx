@@ -10,7 +10,7 @@ export function IndexCard({ quote }: IndexCardProps) {
   const isUp = quote.change >= 0;
   return (
     <div
-      className="premium-card p-4 relative overflow-hidden"
+      className="premium-card p-3 relative overflow-hidden"
       data-testid={`index-card-${quote.symbol}`}
     >
       <div
@@ -22,14 +22,22 @@ export function IndexCard({ quote }: IndexCardProps) {
         }}
       />
       <div className="flex justify-between items-start mb-1 relative">
-        <div>
-          <h3 className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground">
+        <div className="min-w-0">
+          <h3 className="font-extrabold text-[11px] uppercase tracking-wider text-slate-700 truncate">
             {quote.name}
           </h3>
-          <div className="text-[10px] text-muted-foreground/70">{quote.symbol}</div>
+          <div className="text-[10px] text-slate-500 font-medium">{quote.symbol}</div>
         </div>
+        <span
+          className="relative inline-flex h-1.5 w-1.5 mt-1.5 shrink-0"
+          title="Live"
+          aria-label="Live"
+        >
+          <span className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-60" />
+          <span className="relative rounded-full h-1.5 w-1.5 bg-emerald-500" />
+        </span>
       </div>
-      <div className="text-2xl font-extrabold tracking-tight font-mono mt-2">
+      <div className="text-xl font-extrabold tracking-tight font-mono mt-1.5 text-slate-900">
         {quote.price.toLocaleString("en-IN", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
@@ -38,7 +46,7 @@ export function IndexCard({ quote }: IndexCardProps) {
       <PriceChange
         change={quote.change}
         changePct={quote.changePct}
-        className="text-xs mt-1 font-bold"
+        className="text-xs mt-0.5 font-bold"
       />
       <Sparkline data={quote.history} />
     </div>
