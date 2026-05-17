@@ -28,7 +28,7 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm run build
+      - run: pnpm install --no-frozen-lockfile
 
       - uses: actions/configure-pages@v5
 
